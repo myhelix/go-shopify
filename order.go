@@ -8,6 +8,7 @@ import (
 )
 
 const ordersBasePath = "admin/orders"
+const ordersResourceName = "orders"
 
 // OrderService is an interface for interfacing with the orders endpoints of
 // the Shopify API.
@@ -17,6 +18,9 @@ type OrderService interface {
 	Count(interface{}) (int, error)
 	Get(int, interface{}) (*Order, error)
 	Create(Order) (*Order, error)
+
+	// MetafieldsService used for Order resource to communicate with Metafields resource
+	MetafieldsService
 }
 
 // OrderServiceOp handles communication with the order related methods of the
@@ -124,6 +128,7 @@ type Order struct {
 	LandingSiteRef        string           `json:"landing_site_ref,omitempty"`
 	CheckoutID            int              `json:"checkout_id,omitempty"`
 	ContactEmail          string           `json:"contact_email,omitempty"`
+	Metafields            []Metafield      `json:"metafield,omitempty"`
 }
 
 type Address struct {
@@ -324,4 +329,40 @@ func (s *OrderServiceOp) Create(order Order) (*Order, error) {
 	resource := new(OrderResource)
 	err := s.client.Post(path, wrappedData, resource)
 	return resource.Order, err
+}
+
+// List metafields for an order
+func (s *OrderServiceOp) ListMetafields(orderID int, options interface{}) ([]Metafield, error) {
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: ordersResourceName, resourceID: orderID}
+	return metafieldService.List(options)
+}
+
+// Count metafields for an order
+func (s *OrderServiceOp) CountMetafields(orderID int, options interface{}) (int, error) {
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: ordersResourceName, resourceID: orderID}
+	return metafieldService.Count(options)
+}
+
+// Get individual metafield for an order
+func (s *OrderServiceOp) GetMetafield(orderID int, metafieldID int, options interface{}) (*Metafield, error) {
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: ordersResourceName, resourceID: orderID}
+	return metafieldService.Get(metafieldID, options)
+}
+
+// Create a new metafield for an order
+func (s *OrderServiceOp) CreateMetafield(orderID int, metafield Metafield) (*Metafield, error) {
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: ordersResourceName, resourceID: orderID}
+	return metafieldService.Create(metafield)
+}
+
+// Update an existing metafield for an order
+func (s *OrderServiceOp) UpdateMetafield(orderID int, metafield Metafield) (*Metafield, error) {
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: ordersResourceName, resourceID: orderID}
+	return metafieldService.Update(metafield)
+}
+
+// // Delete an existing metafield for an order
+func (s *OrderServiceOp) DeleteMetafield(orderID int, metafieldID int) error {
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: ordersResourceName, resourceID: orderID}
+	return metafieldService.Delete(metafieldID)
 }
