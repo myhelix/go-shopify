@@ -297,9 +297,7 @@ func TestCustomerListMetafields(t *testing.T) {
 		t.Errorf("Customer.ListMetafields() returned error: %v", err)
 	}
 
-	id1 := 1
-	id2 := 2
-	expected := []Metafield{{ID: &id1}, {ID: &id2}}
+	expected := []Metafield{{ID: 1}, {ID: 2}}
 	if !reflect.DeepEqual(metafields, expected) {
 		t.Errorf("Customer.ListMetafields() returned %+v, expected %+v", metafields, expected)
 	}
@@ -349,8 +347,7 @@ func TestCustomerGetMetafield(t *testing.T) {
 		t.Errorf("Customer.GetMetafield() returned error: %v", err)
 	}
 
-	id := 2
-	expected := &Metafield{ID: &id}
+	expected := &Metafield{ID: 2}
 	if !reflect.DeepEqual(metafield, expected) {
 		t.Errorf("Customer.GetMetafield() returned %+v, expected %+v", metafield, expected)
 	}
@@ -385,9 +382,8 @@ func TestCustomerUpdateMetafield(t *testing.T) {
 	httpmock.RegisterResponder("PUT", "https://fooshop.myshopify.com/admin/customers/1/metafields/2.json",
 		httpmock.NewBytesResponder(200, loadFixture("metafield.json")))
 
-	id := 2
 	metafield := Metafield{
-		ID:        &id,
+		ID:        2,
 		Key:       "app_key",
 		Value:     "app_value",
 		ValueType: "string",
