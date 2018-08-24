@@ -35,11 +35,11 @@ func (app App) GetAccessToken(shopName string, code string) (string, error) {
 	}
 
 	data := struct {
-		ClientId     string `json:"client_id"`
+		ClientID     string `json:"client_id"`
 		ClientSecret string `json:"client_secret"`
 		Code         string `json:"code"`
 	}{
-		ClientId:     app.ApiKey,
+		ClientID:     app.ApiKey,
 		ClientSecret: app.ApiSecret,
 		Code:         code,
 	}

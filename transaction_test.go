@@ -10,13 +10,13 @@ import (
 
 func TransactionTests(t *testing.T, transaction Transaction) {
 	// Check that the ID is assigned to the returned transaction
-	expectedID := 389404469
+	expectedID := int64(389404469)
 	if transaction.ID != expectedID {
 		t.Errorf("Transaction.ID returned %+v, expected %+v", transaction.ID, expectedID)
 	}
 
 	// Check that the OrderID value is assigned to the returned transaction
-	expectedOrderID := 450789469
+	expectedOrderID := int64(450789469)
 	if transaction.OrderID != expectedOrderID {
 		t.Errorf("Transaction.OrderID returned %+v, expected %+v", transaction.OrderID, expectedOrderID)
 	}
@@ -76,25 +76,25 @@ func TransactionTests(t *testing.T, transaction Transaction) {
 	}
 
 	// Check that the LocationID value is assigned to the returned transaction
-	var expectedLocationID *int
+	var expectedLocationID *int64
 	if transaction.LocationID != expectedLocationID {
 		t.Errorf("Transaction.LocationID returned %+v, expected %+v", transaction.LocationID, expectedLocationID)
 	}
 
 	// Check that the UserID value is assigned to the returned transaction
-	var expectedUserID *int
+	var expectedUserID *int64
 	if transaction.UserID != expectedUserID {
 		t.Errorf("Transaction.UserID returned %+v, expected %+v", transaction.UserID, expectedUserID)
 	}
 
 	// Check that the ParentID value is assigned to the returned transaction
-	var expectedParentID *int
+	var expectedParentID *int64
 	if transaction.ParentID != expectedParentID {
 		t.Errorf("Transaction.ParentID returned %+v, expected %+v", transaction.ParentID, expectedParentID)
 	}
 
 	// Check that the DeviceID value is assigned to the returned transaction
-	var expectedDeviceID *int
+	var expectedDeviceID *int64
 	if transaction.DeviceID != expectedDeviceID {
 		t.Errorf("Transacion.DeviceID returned %+v, expected %+v", transaction.DeviceID, expectedDeviceID)
 	}

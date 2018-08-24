@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/shopspring/decimal"
-	"gopkg.in/jarcoal/httpmock.v1"
+	httpmock "gopkg.in/jarcoal/httpmock.v1"
 )
 
 // recurringApplicationChargeTests tests if fields are properly parsed.
@@ -21,9 +21,9 @@ func recurringApplicationChargeTests(t *testing.T, charge RecurringApplicationCh
 		expected interface{}
 		actual   interface{}
 	}{
-		{"ID", 1029266948, charge.ID},
+		{"ID", int64(1029266948), charge.ID},
 		{"Name", "Super Duper Plan", charge.Name},
-		{"APIClientID", 755357713, charge.APIClientID},
+		{"APIClientID", int64(755357713), charge.APIClientID},
 		{"Price", decimal.NewFromFloat(10.00).String(), charge.Price.String()},
 		{"Status", "pending", charge.Status},
 		{"ReturnURL", "http://super-duper.shopifyapps.com/", charge.ReturnURL},
@@ -69,9 +69,9 @@ func recurringApplicationChargeTestsAllFieldsAffected(t *testing.T,
 		expected interface{}
 		actual   interface{}
 	}{
-		{"ID", 1029266948, charge.ID},
+		{"ID", int64(1029266948), charge.ID},
 		{"Name", "Super Duper Plan", charge.Name},
-		{"APIClientID", 755357713, charge.APIClientID},
+		{"APIClientID", int64(755357713), charge.APIClientID},
 		{"Price", decimal.NewFromFloat(10.00).String(), charge.Price.String()},
 		{"Status", "pending", charge.Status},
 		{"ReturnURL", "http://super-duper.shopifyapps.com/", charge.ReturnURL},

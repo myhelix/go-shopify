@@ -4,18 +4,18 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/jarcoal/httpmock.v1"
+	httpmock "gopkg.in/jarcoal/httpmock.v1"
 )
 
 func imageTests(t *testing.T, image Image) {
 	// Check that ID is set
-	expectedImageID := 1
+	expectedImageID := int64(1)
 	if image.ID != expectedImageID {
 		t.Errorf("Image.ID returned %+v, expected %+v", image.ID, expectedImageID)
 	}
 
 	// Check that product_id is set
-	expectedProductID := 1
+	expectedProductID := int64(1)
 	if image.ProductID != expectedProductID {
 		t.Errorf("Image.ProductID returned %+v, expected %+v", image.ProductID, expectedProductID)
 	}
@@ -45,15 +45,15 @@ func imageTests(t *testing.T, image Image) {
 	}
 
 	// Check that variant ids are set
-	expectedVariantIds := make([]int, 2)
-	expectedVariantIds[0] = 808950810
-	expectedVariantIds[1] = 808950811
+	expectedVariantIDs := make([]int64, 2)
+	expectedVariantIDs[0] = int64(808950810)
+	expectedVariantIDs[1] = int64(808950811)
 
-	if image.VariantIds[0] != expectedVariantIds[0] {
-		t.Errorf("Image.VariantIds[0] returned %+v, expected %+v", image.VariantIds[0], expectedVariantIds[0])
+	if image.VariantIDs[0] != expectedVariantIDs[0] {
+		t.Errorf("Image.VariantIDs[0] returned %+v, expected %+v", image.VariantIDs[0], expectedVariantIDs[0])
 	}
-	if image.VariantIds[1] != expectedVariantIds[1] {
-		t.Errorf("Image.VariantIds[0] returned %+v, expected %+v", image.VariantIds[1], expectedVariantIds[1])
+	if image.VariantIDs[1] != expectedVariantIDs[1] {
+		t.Errorf("Image.VariantIDs[0] returned %+v, expected %+v", image.VariantIDs[1], expectedVariantIDs[1])
 	}
 
 	// Check that CreatedAt date is set
@@ -143,13 +143,13 @@ func TestImageCreate(t *testing.T) {
 	httpmock.RegisterResponder("POST", "https://fooshop.myshopify.com/admin/products/1/images.json",
 		httpmock.NewBytesResponder(200, loadFixture("image.json")))
 
-	variantIds := make([]int, 2)
-	variantIds[0] = 808950810
-	variantIds[1] = 808950811
+	variantIDs := make([]int64, 2)
+	variantIDs[0] = int64(808950810)
+	variantIDs[1] = int64(808950811)
 
 	image := Image{
 		Src:        "https://cdn.shopify.com/s/files/1/0006/9093/3842/products/ipod-nano.png?v=1500937783",
-		VariantIds: variantIds,
+		VariantIDs: variantIDs,
 	}
 	returnedImage, err := client.Image.Create(1, image)
 	if err != nil {
@@ -167,15 +167,15 @@ func TestImageUpdate(t *testing.T) {
 		httpmock.NewBytesResponder(200, loadFixture("image.json")))
 
 	// Take an existing image
-	variantIds := make([]int, 2)
-	variantIds[0] = 808950810
-	variantIds[1] = 457924702
+	variantIDs := make([]int64, 2)
+	variantIDs[0] = int64(808950810)
+	variantIDs[1] = int64(457924702)
 	existingImage := Image{
 		ID:         1,
-		VariantIds: variantIds,
+		VariantIDs: variantIDs,
 	}
 	// And update it
-	existingImage.VariantIds[1] = 808950811
+	existingImage.VariantIDs[1] = 808950811
 	returnedImage, err := client.Image.Update(1, existingImage)
 	if err != nil {
 		t.Errorf("Image.Update returned error %v", err)
