@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"gopkg.in/jarcoal/httpmock.v1"
+	httpmock "gopkg.in/jarcoal/httpmock.v1"
 )
 
 func TestScriptTagList(t *testing.T) {
@@ -62,7 +62,7 @@ func TestScriptTagGet(t *testing.T) {
 }
 
 func scriptTagTests(t *testing.T, tag ScriptTag) {
-	expected := 870402688
+	expected := int64(870402688)
 	if tag.ID != expected {
 		t.Errorf("tag.ID is %+v, expected %+v", tag.ID, expected)
 	}

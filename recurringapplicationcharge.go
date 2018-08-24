@@ -15,10 +15,10 @@ const recurringApplicationChargesBasePath = "admin/recurring_application_charges
 // See https://help.shopify.com/api/reference/billing/recurringapplicationcharge
 type RecurringApplicationChargeService interface {
 	Create(RecurringApplicationCharge) (*RecurringApplicationCharge, error)
-	Get(int, interface{}) (*RecurringApplicationCharge, error)
+	Get(int64, interface{}) (*RecurringApplicationCharge, error)
 	List(interface{}) ([]RecurringApplicationCharge, error)
 	Activate(RecurringApplicationCharge) (*RecurringApplicationCharge, error)
-	Delete(int) error
+	Delete(int64) error
 	Update(int, int) (*RecurringApplicationCharge, error)
 }
 
@@ -30,7 +30,7 @@ type RecurringApplicationChargeServiceOp struct {
 
 // RecurringApplicationCharge represents a Shopify RecurringApplicationCharge.
 type RecurringApplicationCharge struct {
-	APIClientID           int              `json:"api_client_id"`
+	APIClientID           int64            `json:"api_client_id"`
 	ActivatedOn           *time.Time       `json:"activated_on"`
 	BalanceRemaining      *decimal.Decimal `json:"balance_remaining"`
 	BalanceUsed           *decimal.Decimal `json:"balance_used"`
@@ -40,7 +40,7 @@ type RecurringApplicationCharge struct {
 	ConfirmationURL       string           `json:"confirmation_url"`
 	CreatedAt             *time.Time       `json:"created_at"`
 	DecoratedReturnURL    string           `json:"decorated_return_url"`
-	ID                    int              `json:"id"`
+	ID                    int64            `json:"id"`
 	Name                  string           `json:"name"`
 	Price                 *decimal.Decimal `json:"price"`
 	ReturnURL             string           `json:"return_url"`
@@ -136,7 +136,7 @@ func (r *RecurringApplicationChargeServiceOp) Create(charge RecurringApplication
 }
 
 // Get gets individual recurring application charge.
-func (r *RecurringApplicationChargeServiceOp) Get(chargeID int, options interface{}) (
+func (r *RecurringApplicationChargeServiceOp) Get(chargeID int64, options interface{}) (
 	*RecurringApplicationCharge, error) {
 
 	path := fmt.Sprintf("%s/%d.json", recurringApplicationChargesBasePath, chargeID)
@@ -167,7 +167,7 @@ func (r *RecurringApplicationChargeServiceOp) Activate(charge RecurringApplicati
 }
 
 // Delete deletes recurring application charge.
-func (r *RecurringApplicationChargeServiceOp) Delete(chargeID int) error {
+func (r *RecurringApplicationChargeServiceOp) Delete(chargeID int64) error {
 	return r.client.Delete(fmt.Sprintf("%s/%d.json", recurringApplicationChargesBasePath, chargeID))
 }
 

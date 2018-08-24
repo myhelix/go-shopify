@@ -17,7 +17,7 @@ type ShopServiceOp struct {
 
 // Shop represents a Shopify shop
 type Shop struct {
-	ID                      int        `json:"id"`
+	ID                      int64      `json:"id"`
 	Name                    string     `json:"name"`
 	ShopOwner               string     `json:"shop_owner"`
 	Email                   string     `json:"email"`

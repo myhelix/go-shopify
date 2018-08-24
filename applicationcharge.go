@@ -14,7 +14,7 @@ const applicationChargesBasePath = "admin/application_charges"
 // See https://help.shopify.com/api/reference/billing/applicationcharge
 type ApplicationChargeService interface {
 	Create(ApplicationCharge) (*ApplicationCharge, error)
-	Get(int, interface{}) (*ApplicationCharge, error)
+	Get(int64, interface{}) (*ApplicationCharge, error)
 	List(interface{}) ([]ApplicationCharge, error)
 	Activate(ApplicationCharge) (*ApplicationCharge, error)
 }
@@ -24,9 +24,9 @@ type ApplicationChargeServiceOp struct {
 }
 
 type ApplicationCharge struct {
-	ID                 int              `json:"id"`
+	ID                 int64            `json:"id"`
 	Name               string           `json:"name"`
-	APIClientID        int              `json:"api_client_id"`
+	APIClientID        int64            `json:"api_client_id"`
 	Price              *decimal.Decimal `json:"price"`
 	Status             string           `json:"status"`
 	ReturnURL          string           `json:"return_url"`
@@ -58,7 +58,7 @@ func (a ApplicationChargeServiceOp) Create(charge ApplicationCharge) (*Applicati
 }
 
 // Get gets individual application charge.
-func (a ApplicationChargeServiceOp) Get(chargeID int, options interface{}) (*ApplicationCharge, error) {
+func (a ApplicationChargeServiceOp) Get(chargeID int64, options interface{}) (*ApplicationCharge, error) {
 	path := fmt.Sprintf("%s/%d.json", applicationChargesBasePath, chargeID)
 	resource := &ApplicationChargeResource{}
 	return resource.Charge, a.client.Get(path, resource, options)

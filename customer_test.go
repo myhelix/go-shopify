@@ -109,7 +109,7 @@ func TestCustomerGet(t *testing.T) {
 		OrdersCount:      4,
 		State:            "enabled",
 		TotalSpent:       &totalSpent,
-		LastOrderId:      123,
+		LastOrderID:      123,
 		Note:             "",
 		Phone:            "",
 		DefaultAddress:   address1,
@@ -148,8 +148,8 @@ func TestCustomerGet(t *testing.T) {
 	if !expectation.TotalSpent.Truncate(2).Equals(customer.TotalSpent.Truncate(2)) {
 		t.Errorf("Customer.TotalSpent returned %+v, expected %+v", customer.TotalSpent, expectation.TotalSpent)
 	}
-	if customer.LastOrderId != expectation.LastOrderId {
-		t.Errorf("Customer.LastOrderId returned %+v, expected %+v", customer.LastOrderId, expectation.LastOrderId)
+	if customer.LastOrderID != expectation.LastOrderID {
+		t.Errorf("Customer.LastOrderID returned %+v, expected %+v", customer.LastOrderID, expectation.LastOrderID)
 	}
 	if customer.Note != expectation.Note {
 		t.Errorf("Customer.Note returned %+v, expected %+v", customer.Note, expectation.Note)
@@ -243,7 +243,7 @@ func TestCustomerUpdate(t *testing.T) {
 		t.Errorf("Customer.Update returned error: %v", err)
 	}
 
-	expectedCustomerID := 1
+	expectedCustomerID := int64(1)
 	if returnedCustomer.ID != expectedCustomerID {
 		t.Errorf("Customer.ID returned %+v expected %+v", returnedCustomer.ID, expectedCustomerID)
 	}
@@ -266,7 +266,7 @@ func TestCustomerCreate(t *testing.T) {
 		t.Errorf("Customer.Create returned error: %v", err)
 	}
 
-	expectedCustomerID := 1
+	expectedCustomerID := int64(1)
 	if returnedCustomer.ID != expectedCustomerID {
 		t.Errorf("Customer.ID returned %+v expected %+v", returnedCustomer.ID, expectedCustomerID)
 	}
