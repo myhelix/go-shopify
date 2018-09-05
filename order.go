@@ -153,12 +153,6 @@ type Address struct {
 	Zip          string  `json:"zip,omitempty"`
 }
 
-type DiscountCode struct {
-	Amount *decimal.Decimal `json:"amount,omitempty"`
-	Code   string           `json:"code,omitempty"`
-	Type   string           `json:"type,omitempty"`
-}
-
 type LineItem struct {
 	ID                         int64            `json:"id,omitempty"`
 	ProductID                  int64            `json:"product_id,omitempty"`
