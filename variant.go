@@ -8,6 +8,7 @@ import (
 )
 
 const variantsBasePath = "admin/variants"
+const variantsResourceName = "variants"
 
 // VariantService is an interface for interacting with the variant endpoints
 // of the Shopify API.
@@ -19,6 +20,9 @@ type VariantService interface {
 	Create(int64, Variant) (*Variant, error)
 	Update(Variant) (*Variant, error)
 	Delete(int64, int64) error
+
+	// MetafieldsService used for Variant resource to communicate with Metafields resource
+	VariantMetafieldsService
 }
 
 // VariantServiceOp handles communication with the variant related methods of
@@ -53,6 +57,7 @@ type Variant struct {
 	WeightUnit           string           `json:"weight_unit,omitempty"`
 	OldInventoryQuantity int              `json:"old_inventory_quantity,omitempty"`
 	RequireShipping      bool             `json:"requires_shipping,omitempty"`
+	Metafields           []Metafield      `json:"metafields,omitempty"`
 }
 
 // VariantResource represents the result from the variants/X.json endpoint
@@ -105,7 +110,49 @@ func (s *VariantServiceOp) Update(variant Variant) (*Variant, error) {
 	return resource.Variant, err
 }
 
-// Delete an existing product
+// Delete an existing variant
 func (s *VariantServiceOp) Delete(productID int64, variantID int64) error {
 	return s.client.Delete(fmt.Sprintf("%s/%d/variants/%d.json", productsBasePath, productID, variantID))
+}
+
+// List metafields for a variant
+func (s *VariantServiceOp) ListMetafields(productID int64, variantID int64, options interface{}) ([]Metafield, error) {
+	variantMetafieldResource := fmt.Sprintf("products/%d/variants", productID)
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantMetafieldResource, resourceID: variantID}
+	return metafieldService.List(options)
+}
+
+// Count metafields for a variant
+func (s *VariantServiceOp) CountMetafields(productID int64, variantID int64, options interface{}) (int, error) {
+	variantMetafieldResource := fmt.Sprintf("products/%d/variants", productID)
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantMetafieldResource, resourceID: variantID}
+	return metafieldService.Count(options)
+}
+
+// Get individual metafield for a variant
+func (s *VariantServiceOp) GetMetafield(productID int64, variantID int64, metafieldID int64, options interface{}) (*Metafield, error) {
+	variantMetafieldResource := fmt.Sprintf("products/%d/variants", productID)
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantMetafieldResource, resourceID: variantID}
+	return metafieldService.Get(metafieldID, options)
+}
+
+// Create a new metafield for a variant
+func (s *VariantServiceOp) CreateMetafield(productID int64, variantID int64, metafield Metafield) (*Metafield, error) {
+	variantMetafieldResource := fmt.Sprintf("products/%d/variants", productID)
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantMetafieldResource, resourceID: variantID}
+	return metafieldService.Create(metafield)
+}
+
+// Update an existing metafield for a variant
+func (s *VariantServiceOp) UpdateMetafield(productID int64, variantID int64, metafield Metafield) (*Metafield, error) {
+	variantMetafieldResource := fmt.Sprintf("products/%d/variants", productID)
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantMetafieldResource, resourceID: variantID}
+	return metafieldService.Update(metafield)
+}
+
+// Delete an existing metafield for a variant
+func (s *VariantServiceOp) DeleteMetafield(productID int64, variantID int64, metafieldID int64) error {
+	variantMetafieldResource := fmt.Sprintf("products/%d/variants", productID)
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantMetafieldResource, resourceID: variantID}
+	return metafieldService.Delete(metafieldID)
 }

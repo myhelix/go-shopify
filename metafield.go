@@ -29,6 +29,18 @@ type MetafieldsService interface {
 	DeleteMetafield(int64, int64) error
 }
 
+// VariantMetafieldsService is an interface for Shopify's Variant resource
+// to interface with the metafield endpoints of the Shopify API.
+// https://help.shopify.com/api/reference/metafield
+type VariantMetafieldsService interface {
+	ListMetafields(int64, int64, interface{}) ([]Metafield, error)
+	CountMetafields(int64, int64, interface{}) (int, error)
+	GetMetafield(int64, int64, int64, interface{}) (*Metafield, error)
+	CreateMetafield(int64, int64, Metafield) (*Metafield, error)
+	UpdateMetafield(int64, int64, Metafield) (*Metafield, error)
+	DeleteMetafield(int64, int64, int64) error
+}
+
 // MetafieldServiceOp handles communication with the metafield
 // related methods of the Shopify API.
 type MetafieldServiceOp struct {
