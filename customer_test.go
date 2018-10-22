@@ -285,6 +285,27 @@ func TestCustomerDelete(t *testing.T) {
 	}
 }
 
+func TestCustomerListOrders(t *testing.T) {
+	setup()
+	defer teardown()
+
+	httpmock.RegisterResponder("GET", "https://fooshop.myshopify.com/admin/customers/1/orders.json",
+		httpmock.NewBytesResponder(200, loadFixture("orders.json")))
+
+	orders, err := client.Customer.ListOrders(1, nil)
+	if err != nil {
+		t.Errorf("Customer.ListOrders returned error: %v", err)
+	}
+
+	// Check that orders were parsed
+	if len(orders) != 1 {
+		t.Errorf("Customers.ListOrders got %v orders, expected: 1", len(orders))
+	}
+
+	order := orders[0]
+	orderTests(t, order)
+}
+
 func TestCustomerListMetafields(t *testing.T) {
 	setup()
 	defer teardown()
