@@ -27,7 +27,7 @@ type CustomerService interface {
 	MetafieldsService
 }
 
-// CustomerServiceOp handles communication with the product related methods of
+// CustomerServiceOp handles communication with the customer related methods of
 // the Shopify API.
 type CustomerServiceOp struct {
 	client *Client
