@@ -38,10 +38,10 @@ type GiftCard struct {
 	Note           string           `json:"note,omitempty"`
 	TemplateSuffix string           `json:"template_suffix,omitempty"`
 	LastCharacters string           `json:"last_characters,omitempty"`
+	ExpiresOn      string           `json:"expires_on,omitempty"`
 	CreatedAt      *time.Time       `json:"created_at,omitempty"`
 	UpdatedAt      *time.Time       `json:"updated_at,omitempty"`
 	DisabledAt     *time.Time       `json:"disabled_at,omitempty"`
-	ExpiresOn      *time.Time       `json:"expires_on,omitempty"`
 	APIClientID    int64            `json:"api_client_id,omitempty"`
 	OrderID        int64            `json:"order_id,omitempty"`
 	UserID         int64            `json:"user_id,omitempty"`
