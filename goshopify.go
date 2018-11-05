@@ -19,6 +19,8 @@ import (
 
 const (
 	UserAgent = "goshopify/1.0.0"
+
+	callLimitHeader = "X-Shopify-Shop-Api-Call-Limit"
 )
 
 // App represents basic app settings such as Api key, secret, scope, and redirect url.
@@ -46,6 +48,9 @@ type Client struct {
 
 	// A permanent access token
 	token string
+
+	// A logger.
+	log Logger
 
 	// Services used for communicating with the API
 	Product                    ProductService
@@ -178,7 +183,7 @@ func NewClient(app App, shopName, token string) *Client {
 
 	baseURL, _ := url.Parse(ShopBaseUrl(shopName))
 
-	c := &Client{Client: httpClient, app: app, baseURL: baseURL, token: token}
+	c := &Client{Client: httpClient, app: app, baseURL: baseURL, token: token, log: &defaultLogger{}}
 	c.Product = &ProductServiceOp{client: c}
 	c.CustomCollection = &CustomCollectionServiceOp{client: c}
 	c.SmartCollection = &SmartCollectionServiceOp{client: c}
@@ -207,6 +212,12 @@ func NewClient(app App, shopName, token string) *Client {
 	return c
 }
 
+// WithLogger just sets logger and returns the Client.
+func (c *Client) WithLogger(l Logger) *Client {
+	c.log = l
+	return c
+}
+
 // Do sends an API request and populates the given interface with the parsed
 // response. It does not make much sense to call Do without a prepared
 // interface instance.
@@ -220,6 +231,10 @@ func (c *Client) Do(req *http.Request, v interface{}) error {
 	err = CheckResponseError(resp)
 	if err != nil {
 		return err
+	}
+
+	if callLimit, ok := resp.Header[callLimitHeader]; ok {
+		c.log.Info("%s: %s", callLimitHeader, callLimit[0])
 	}
 
 	if v != nil {

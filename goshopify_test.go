@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"gopkg.in/jarcoal/httpmock.v1"
+	httpmock "gopkg.in/jarcoal/httpmock.v1"
 )
 
 var (
@@ -31,6 +31,10 @@ func (errReader) Read([]byte) (int, error) {
 func (errReader) Close() error {
 	return nil
 }
+
+type noOpLogger struct{}
+
+func (l *noOpLogger) Info(format string, args ...interface{}) {}
 
 func setup() {
 	app = App{
@@ -69,6 +73,15 @@ func TestNewClientWithNoToken(t *testing.T) {
 	expected := "https://fooshop.myshopify.com"
 	if testClient.baseURL.String() != expected {
 		t.Errorf("NewClient BaseURL = %v, expected %v", testClient.baseURL.String(), expected)
+	}
+}
+
+func TestWithLogger(t *testing.T) {
+	testClient := NewClient(app, "fooshop", "abcd")
+	expected := &noOpLogger{}
+	testClient.WithLogger(expected)
+	if testClient.log != expected {
+		t.Errorf("Client log = %v, expected %v", testClient.log, expected)
 	}
 }
 
@@ -277,6 +290,15 @@ func TestDo(t *testing.T) {
 				Message: "invalid character '<' looking for beginning of value",
 				Status:  500,
 			},
+		},
+		{
+			"foo/9",
+			func(req *http.Request) (*http.Response, error) {
+				resp := httpmock.NewStringResponse(200, `{"foo": "bar"}`)
+				resp.Header.Add("X-Shopify-Shop-Api-Call-Limit", "1/20")
+				return resp, nil
+			},
+			&MyStruct{Foo: "bar"},
 		},
 	}
 
