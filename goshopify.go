@@ -18,19 +18,22 @@ import (
 )
 
 const (
-	UserAgent = "goshopify/1.0.0"
-
+	UserAgent       = "goshopify/1.0.0"
 	callLimitHeader = "X-Shopify-Shop-Api-Call-Limit"
 )
+
+var bucketCapacity = 0
 
 // App represents basic app settings such as Api key, secret, scope, and redirect url.
 // See oauth.go for OAuth related helper functions.
 type App struct {
-	ApiKey      string
-	ApiSecret   string
-	RedirectUrl string
-	Scope       string
-	Password    string
+	ApiKey          string
+	ApiSecret       string
+	RedirectUrl     string
+	Scope           string
+	Password        string
+	BucketThreshold int           // when bucket capacity reaches threshold delay next request
+	HeavyLoadDelay  time.Duration // delay between requests under heavy load
 }
 
 // Client manages communication with the Shopify API.
@@ -222,6 +225,10 @@ func (c *Client) WithLogger(l Logger) *Client {
 // response. It does not make much sense to call Do without a prepared
 // interface instance.
 func (c *Client) Do(req *http.Request, v interface{}) error {
+	// Self-throttle if bucket capacity is specified and exceeds threshold
+	if c.app.BucketThreshold > 0 && bucketCapacity > c.app.BucketThreshold {
+		time.Sleep(c.app.HeavyLoadDelay)
+	}
 	resp, err := c.Client.Do(req)
 	if err != nil {
 		return err
@@ -234,6 +241,8 @@ func (c *Client) Do(req *http.Request, v interface{}) error {
 	}
 
 	if callLimit, ok := resp.Header[callLimitHeader]; ok {
+		// Extract the current bucket capacity from the call limit response header
+		bucketCapacity, err = strconv.Atoi(strings.Split(callLimit[0], "/")[0])
 		c.log.Info("%s: %s", callLimitHeader, callLimit[0])
 	}
 
