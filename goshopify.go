@@ -243,6 +243,9 @@ func (c *Client) Do(req *http.Request, v interface{}) error {
 	if callLimit, ok := resp.Header[callLimitHeader]; ok {
 		// Extract the current bucket capacity from the call limit response header
 		bucketCapacity, err = strconv.Atoi(strings.Split(callLimit[0], "/")[0])
+		if err != nil {
+			return err
+		}
 		c.log.Info("%s: %s", callLimitHeader, callLimit[0])
 	}
 
