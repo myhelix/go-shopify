@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/eapache/go-resiliency/retrier"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -262,6 +263,11 @@ func (c *Client) Do(req *http.Request, v interface{}) error {
 	}
 
 	return nil
+}
+
+func (c *Client) DoWithRetry(req *http.Request, v interface{}) error {
+	retriableErrors := []error{RateLimitError}
+	retrier.New(retrier.ExponentialBackoff(3, 100*time.Millisecond))
 }
 
 func wrapSpecificError(r *http.Response, err ResponseError) error {
