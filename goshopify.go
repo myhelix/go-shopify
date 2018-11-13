@@ -265,9 +265,36 @@ func (c *Client) Do(req *http.Request, v interface{}) error {
 	return nil
 }
 
-func (c *Client) DoWithRetry(req *http.Request, v interface{}) error {
-	retriableErrors := []error{RateLimitError}
-	retrier.New(retrier.ExponentialBackoff(3, 100*time.Millisecond))
+var errorClassifier ErrorClassifier
+
+type ErrorClassifier struct{}
+
+func (s ErrorClassifier) Classify(err error) retrier.Action {
+	if err == nil {
+		return retrier.Succeed
+	}
+
+	switch err.(type) {
+	case *RateLimitError:
+		return retrier.Retry
+
+	default:
+		return retrier.Fail
+	}
+}
+
+func (c *Client) DoWithRetry(req *http.Request, v interface{}) (err error) {
+	r := retrier.New(retrier.ExponentialBackoff(3, 1*time.Second), errorClassifier)
+	err = r.Run(func() error {
+		err := c.Do(req, v)
+		if err != nil {
+			c.log.Warn("error occurred calling shopify: %v; may retry", err)
+		}
+
+		return err
+	})
+
+	return err
 }
 
 func wrapSpecificError(r *http.Response, err ResponseError) error {
