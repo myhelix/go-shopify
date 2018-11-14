@@ -228,6 +228,7 @@ func (c *Client) WithLogger(l Logger) *Client {
 func (c *Client) Do(req *http.Request, v interface{}) error {
 	// Self-throttle if bucket capacity is specified and exceeds threshold
 	if c.app.BucketThreshold > 0 && bucketCapacity > c.app.BucketThreshold {
+		c.log.Warn("sleep due to heavy Shopify API traffic for time=%s.", c.app.HeavyLoadDelay)
 		time.Sleep(c.app.HeavyLoadDelay)
 	}
 	resp, err := c.Client.Do(req)
@@ -292,9 +293,8 @@ func (c *Client) DoWithRetry(req *http.Request, v interface{}) (err error) {
 	err = r.Run(func() error {
 		err := c.Do(req, v)
 		numRetry += 1
-		c.log.Warn("shopify API request numCalled=%d", numRetry)
 		if err != nil {
-			c.log.Warn("error occurred calling Shopify: %v; may retry", err)
+			c.log.Warn("error occurred calling Shopify: %v; numCalled=%d; may retry", err, numRetry)
 		}
 		return err
 	})
