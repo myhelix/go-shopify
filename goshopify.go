@@ -286,15 +286,16 @@ func (s ErrorClassifier) Classify(err error) retrier.Action {
 }
 
 func (c *Client) DoWithRetry(req *http.Request, v interface{}) (err error) {
-	r := retrier.New(retrier.ExponentialBackoff(3, 1*time.Second), errorClassifier)
+	// exponential retry 5 times with a maximum of 15 seconds delay
+	r := retrier.New(retrier.ExponentialBackoff(4, 1*time.Second), errorClassifier)
 	numRetry := 0
 	err = r.Run(func() error {
 		err := c.Do(req, v)
-		if err != nil {
-			c.log.Warn("error occurred calling Shopify: %v; numRetry=%d; may retry", err, numRetry)
-		}
-
 		numRetry += 1
+		c.log.Warn("shopify API request numCalled=%d", numRetry)
+		if err != nil {
+			c.log.Warn("error occurred calling Shopify: %v; may retry", err)
+		}
 		return err
 	})
 
