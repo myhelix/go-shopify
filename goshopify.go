@@ -275,22 +275,26 @@ func (s ErrorClassifier) Classify(err error) retrier.Action {
 	}
 
 	switch err.(type) {
-	case *RateLimitError:
+	case RateLimitError:
+		fmt.Printf("Classify.Retry: %v", err)
 		return retrier.Retry
 
 	default:
+		fmt.Printf("Classify.Fail: %v", err)
 		return retrier.Fail
 	}
 }
 
 func (c *Client) DoWithRetry(req *http.Request, v interface{}) (err error) {
 	r := retrier.New(retrier.ExponentialBackoff(3, 1*time.Second), errorClassifier)
+	numRetry := 0
 	err = r.Run(func() error {
 		err := c.Do(req, v)
 		if err != nil {
-			c.log.Warn("error occurred calling shopify: %v; may retry", err)
+			c.log.Warn("error occurred calling Shopify: %v; numRetry=%d; may retry", err, numRetry)
 		}
 
+		numRetry += 1
 		return err
 	})
 
