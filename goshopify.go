@@ -277,11 +277,9 @@ func (s ErrorClassifier) Classify(err error) retrier.Action {
 
 	switch err.(type) {
 	case RateLimitError:
-		fmt.Printf("Classify.Retry: %v", err)
 		return retrier.Retry
 
 	default:
-		fmt.Printf("Classify.Fail: %v", err)
 		return retrier.Fail
 	}
 }
