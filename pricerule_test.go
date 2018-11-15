@@ -96,7 +96,7 @@ func TestPriceRuleCreate(t *testing.T) {
 		PrerequisiteQuantityRange:              nil,
 		PrerequisiteShippingPriceRange:         nil,
 		PrerequisiteToEntitlementQuantityRatio: prerequisiteToEntitlementQuantityRatio,
-		Title: "SUMMERSALE10OFF",
+		Title:                                  "SUMMERSALE10OFF",
 	}
 
 	returnedPriceRule, err := client.PriceRule.Create(priceRule)

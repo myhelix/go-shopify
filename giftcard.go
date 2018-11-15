@@ -34,6 +34,7 @@ type GiftCard struct {
 	InitialValue   *decimal.Decimal `json:"initial_value,omitempty"`
 	Balance        *decimal.Decimal `json:"balance,omitempty"`
 	Code           string           `json:"code,omitempty"`
+	MaskedCode     string           `json:"masked_code,omitempty"`
 	Currency       string           `json:"currency,omitempty"`
 	Note           string           `json:"note,omitempty"`
 	TemplateSuffix string           `json:"template_suffix,omitempty"`
