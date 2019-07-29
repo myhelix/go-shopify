@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/eapache/go-resiliency/retrier"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -228,7 +227,6 @@ func (c *Client) WithLogger(l Logger) *Client {
 func (c *Client) Do(req *http.Request, v interface{}) error {
 	// Self-throttle if bucket capacity is specified and exceeds threshold
 	if c.app.BucketThreshold > 0 && bucketCapacity > c.app.BucketThreshold {
-		c.log.Warn("sleep due to heavy Shopify API traffic for time=%s.", c.app.HeavyLoadDelay)
 		time.Sleep(c.app.HeavyLoadDelay)
 	}
 	resp, err := c.Client.Do(req)
@@ -247,7 +245,7 @@ func (c *Client) Do(req *http.Request, v interface{}) error {
 		// Extract the current bucket capacity from the call limit response header
 		bucketCapacity, err = strconv.Atoi(strings.Split(callLimit[0], "/")[0])
 		if err != nil {
-			logMessage = "Unable to parse the call limit header: " + logMessage
+			logMessage = "Unable to parse the call limit header. " + logMessage
 			// set bucket capacity to the threshold + 1 to throttle requests until call limit header can be parsed
 			bucketCapacity = c.app.BucketThreshold + 1
 		}
@@ -264,40 +262,6 @@ func (c *Client) Do(req *http.Request, v interface{}) error {
 	}
 
 	return nil
-}
-
-var errorClassifier ErrorClassifier
-
-type ErrorClassifier struct{}
-
-func (s ErrorClassifier) Classify(err error) retrier.Action {
-	if err == nil {
-		return retrier.Succeed
-	}
-
-	switch err.(type) {
-	case RateLimitError:
-		return retrier.Retry
-
-	default:
-		return retrier.Fail
-	}
-}
-
-func (c *Client) DoWithRetry(req *http.Request, v interface{}) (err error) {
-	// exponential retry 5 times with a maximum of 15 seconds delay
-	r := retrier.New(retrier.ExponentialBackoff(4, 1*time.Second), errorClassifier)
-	numRetry := 0
-	err = r.Run(func() error {
-		err := c.Do(req, v)
-		numRetry += 1
-		if err != nil {
-			c.log.Warn("error occurred calling Shopify: %v; numCalled=%d; may retry", err, numRetry)
-		}
-		return err
-	})
-
-	return err
 }
 
 func wrapSpecificError(r *http.Response, err ResponseError) error {
@@ -445,7 +409,7 @@ func (c *Client) CreateAndDo(method, path string, data, options, resource interf
 		return err
 	}
 
-	err = c.DoWithRetry(req, resource)
+	err = c.Do(req, resource)
 	if err != nil {
 		return err
 	}
