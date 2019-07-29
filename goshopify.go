@@ -241,16 +241,12 @@ func (c *Client) Do(req *http.Request, v interface{}) error {
 	}
 
 	if callLimit, ok := resp.Header[callLimitHeader]; ok {
-		logMessage := fmt.Sprintf("%s: %s", callLimitHeader, callLimit[0])
 		// Extract the current bucket capacity from the call limit response header
 		bucketCapacity, err = strconv.Atoi(strings.Split(callLimit[0], "/")[0])
 		if err != nil {
-			logMessage = "Unable to parse the call limit header. " + logMessage
-			// set bucket capacity to the threshold + 1 to throttle requests until call limit header can be parsed
-			bucketCapacity = c.app.BucketThreshold + 1
+			return err
 		}
-
-		c.log.Info(logMessage)
+		c.log.Info("%s: %s", callLimitHeader, callLimit[0])
 	}
 
 	if v != nil {
