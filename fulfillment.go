@@ -58,14 +58,13 @@ type Fulfillment struct {
 	TrackingUrls    []string   `json:"tracking_urls,omitempty"`
 	Receipt         Receipt    `json:"receipt,omitempty"`
 	LineItems       []LineItem `json:"line_items,omitempty"`
-	NotifyCustomer  bool       `json:"notify_customer,omitempty"`
+	NotifyCustomer  bool       `json:"notify_customer"`
 }
 
 // Receipt represents a Shopify receipt.
 type Receipt struct {
-	TestCase      bool       `json:"testcase,omitempty"`
-	Authorization string     `json:"authorization,omitempty"`
-	GiftCards     []GiftCard `json:"gift_cards,omitempty"`
+	TestCase      bool   `json:"testcase,omitempty"`
+	Authorization string `json:"authorization,omitempty"`
 }
 
 // FulfillmentResource represents the result from the fulfillments/X.json endpoint
@@ -126,7 +125,7 @@ func (s *FulfillmentServiceOp) Update(fulfillment Fulfillment) (*Fulfillment, er
 // Complete an existing fulfillment
 func (s *FulfillmentServiceOp) Complete(fulfillmentID int64) (*Fulfillment, error) {
 	prefix := FulfillmentPathPrefix(s.resource, s.resourceID)
-	path := fmt.Sprintf("%s/%d.json", prefix, fulfillmentID)
+	path := fmt.Sprintf("%s/%d/complete.json", prefix, fulfillmentID)
 	resource := new(FulfillmentResource)
 	err := s.client.Post(path, nil, resource)
 	return resource.Fulfillment, err
@@ -135,7 +134,7 @@ func (s *FulfillmentServiceOp) Complete(fulfillmentID int64) (*Fulfillment, erro
 // Transition an existing fulfillment
 func (s *FulfillmentServiceOp) Transition(fulfillmentID int64) (*Fulfillment, error) {
 	prefix := FulfillmentPathPrefix(s.resource, s.resourceID)
-	path := fmt.Sprintf("%s/%d.json", prefix, fulfillmentID)
+	path := fmt.Sprintf("%s/%d/open.json", prefix, fulfillmentID)
 	resource := new(FulfillmentResource)
 	err := s.client.Post(path, nil, resource)
 	return resource.Fulfillment, err
@@ -144,7 +143,7 @@ func (s *FulfillmentServiceOp) Transition(fulfillmentID int64) (*Fulfillment, er
 // Cancel an existing fulfillment
 func (s *FulfillmentServiceOp) Cancel(fulfillmentID int64) (*Fulfillment, error) {
 	prefix := FulfillmentPathPrefix(s.resource, s.resourceID)
-	path := fmt.Sprintf("%s/%d.json", prefix, fulfillmentID)
+	path := fmt.Sprintf("%s/%d/cancel.json", prefix, fulfillmentID)
 	resource := new(FulfillmentResource)
 	err := s.client.Post(path, nil, resource)
 	return resource.Fulfillment, err

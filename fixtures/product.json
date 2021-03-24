@@ -1,6 +1,6 @@
 {
   "product": {
-    "id": 1000000000000,
+    "id": 1071559748,
     "title": "Burton Custom Freestyle 151",
     "body_html": "<strong>Good snowboard!<\/strong>",
     "vendor": "Burton",
@@ -15,7 +15,7 @@
     "variants": [
       {
         "id": 1070325219,
-        "product_id": 1000000000000,
+        "product_id": 1071559748,
         "title": "Default Title",
         "price": "0.00",
         "sku": "",
@@ -37,13 +37,14 @@
         "weight": 0.0,
         "weight_unit": "lb",
         "old_inventory_quantity": 1,
-        "requires_shipping": true
+        "requires_shipping": true,
+        "admin_graphql_api_id": "gid://shopify/ProductVariant/1070325219"
       }
     ],
     "options": [
       {
         "id": 1022828904,
-        "product_id": 1000000000000,
+        "product_id": 1071559748,
         "name": "Title",
         "position": 1,
         "values": [
@@ -53,6 +54,7 @@
     ],
     "images": [
     ],
-    "image": null
+    "image": null,
+    "admin_graphql_api_id": "gid://shopify/Product/1071559748"
   }
 }

@@ -1,77 +1,104 @@
 package goshopify
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
-	httpmock "gopkg.in/jarcoal/httpmock.v1"
+	"github.com/jarcoal/httpmock"
 )
 
-func TestLocationList(t *testing.T) {
+func TestLocationServiceOp_List(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("GET", "https://fooshop.myshopify.com/admin/locations.json",
-		httpmock.NewStringResponder(200, `{"locations": [{"id":1},{"id":2}]}`))
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://fooshop.myshopify.com/%s/locations.json", client.pathPrefix),
+		httpmock.NewBytesResponder(200, loadFixture("locations.json")))
 
-	locations, err := client.Location.List(nil)
+	products, err := client.Location.List(nil)
 	if err != nil {
 		t.Errorf("Location.List returned error: %v", err)
 	}
 
-	expected := []Location{{ID: 1}, {ID: 2}}
-	if !reflect.DeepEqual(locations, expected) {
-		t.Errorf("Location.List returned %+v, expected %+v", locations, expected)
+	created, _ := time.Parse(time.RFC3339, "2018-02-19T16:18:59-05:00")
+	updated, _ := time.Parse(time.RFC3339, "2018-02-19T16:19:00-05:00")
+
+	expected := []Location{{
+		ID:                4688969785,
+		Name:              "Bajkowa",
+		Address1:          "Bajkowa",
+		Address2:          "",
+		City:              "Olsztyn",
+		Zip:               "10-001",
+		Country:           "PL",
+		Phone:             "12312312",
+		CreatedAt:         created,
+		UpdatedAt:         updated,
+		CountryCode:       "PL",
+		CountryName:       "Poland",
+		Legacy:            false,
+		Active:            true,
+		AdminGraphqlAPIID: "gid://shopify/Location/4688969785",
+	}}
+
+	if !reflect.DeepEqual(products, expected) {
+		t.Errorf("Location.List returned %+v, expected %+v", products, expected)
 	}
 }
 
-func TestLocationCount(t *testing.T) {
+func TestLocationServiceOp_Get(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("GET", "https://fooshop.myshopify.com/admin/locations/count.json",
-		httpmock.NewStringResponder(200, `{"count": 5}`))
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://fooshop.myshopify.com/%s/locations/4688969785.json", client.pathPrefix),
+		httpmock.NewBytesResponder(200, loadFixture("location.json")))
 
-	httpmock.RegisterResponder("GET", "https://fooshop.myshopify.com/admin/locations/count.json?created_at_min=2016-01-01T00%3A00%3A00Z",
-		httpmock.NewStringResponder(200, `{"count": 2}`))
+	product, err := client.Location.Get(4688969785, nil)
+	if err != nil {
+		t.Errorf("Location.Get returned error: %v", err)
+	}
+
+	created, _ := time.Parse(time.RFC3339, "2018-02-19T16:18:59-05:00")
+	updated, _ := time.Parse(time.RFC3339, "2018-02-19T16:19:00-05:00")
+
+	expected := &Location{
+		ID:                4688969785,
+		Name:              "Bajkowa",
+		Address1:          "Bajkowa",
+		Address2:          "",
+		City:              "Olsztyn",
+		Zip:               "10-001",
+		Country:           "PL",
+		Phone:             "12312312",
+		CreatedAt:         created,
+		UpdatedAt:         updated,
+		CountryCode:       "PL",
+		CountryName:       "Poland",
+		Legacy:            false,
+		Active:            true,
+		AdminGraphqlAPIID: "gid://shopify/Location/4688969785",
+	}
+
+	if !reflect.DeepEqual(product, expected) {
+		t.Errorf("Location.Get returned %+v, expected %+v", product, expected)
+	}
+}
+
+func TestLocationServiceOp_Count(t *testing.T) {
+	setup()
+	defer teardown()
+
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://fooshop.myshopify.com/%s/locations/count.json", client.pathPrefix),
+		httpmock.NewStringResponder(200, `{"count": 3}`))
 
 	cnt, err := client.Location.Count(nil)
 	if err != nil {
 		t.Errorf("Location.Count returned error: %v", err)
 	}
 
-	expected := 5
+	expected := 3
 	if cnt != expected {
 		t.Errorf("Location.Count returned %d, expected %d", cnt, expected)
-	}
-
-	date := time.Date(2016, time.January, 1, 0, 0, 0, 0, time.UTC)
-	cnt, err = client.Location.Count(CountOptions{CreatedAtMin: date})
-	if err != nil {
-		t.Errorf("Location.Count returned error: %v", err)
-	}
-
-	expected = 2
-	if cnt != expected {
-		t.Errorf("Location.Count returned %d, expected %d", cnt, expected)
-	}
-}
-
-func TestLocationGet(t *testing.T) {
-	setup()
-	defer teardown()
-
-	httpmock.RegisterResponder("GET", "https://fooshop.myshopify.com/admin/locations/1.json",
-		httpmock.NewStringResponder(200, `{"location": {"id":1}}`))
-
-	location, err := client.Location.Get(1, nil)
-	if err != nil {
-		t.Errorf("Location.Get returned error: %v", err)
-	}
-
-	expected := &Location{ID: 1}
-	if !reflect.DeepEqual(location, expected) {
-		t.Errorf("Location.Get returned %+v, expected %+v", location, expected)
 	}
 }

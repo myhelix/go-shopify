@@ -7,7 +7,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-const customersBasePath = "admin/customers"
+const customersBasePath = "customers"
 const customersResourceName = "customers"
 
 // CustomerService is an interface for interfacing with the customers endpoints
@@ -22,12 +22,13 @@ type CustomerService interface {
 	Update(Customer) (*Customer, error)
 	Delete(int64) error
 	ListOrders(int64, interface{}) ([]Order, error)
+	ListTags(interface{}) ([]string, error)
 
 	// MetafieldsService used for Customer resource to communicate with Metafields resource
 	MetafieldsService
 }
 
-// CustomerServiceOp handles communication with the customer related methods of
+// CustomerServiceOp handles communication with the product related methods of
 // the Shopify API.
 type CustomerServiceOp struct {
 	client *Client
@@ -48,7 +49,7 @@ type Customer struct {
 	TotalSpent          *decimal.Decimal   `json:"total_spent,omitempty"`
 	Phone               string             `json:"phone,omitempty"`
 	Tags                string             `json:"tags,omitempty"`
-	LastOrderID         int64              `json:"last_order_id,omitempty"`
+	LastOrderId         int64              `json:"last_order_id,omitempty"`
 	LastOrderName       string             `json:"last_order_name,omitempty"`
 	AcceptsMarketing    bool               `json:"accepts_marketing,omitempty"`
 	DefaultAddress      *CustomerAddress   `json:"default_address,omitempty"`
@@ -66,6 +67,11 @@ type CustomerResource struct {
 // Represents the result from the customers.json endpoint
 type CustomersResource struct {
 	Customers []Customer `json:"customers"`
+}
+
+// Represents the result from the customers/tags.json endpoint
+type CustomerTagsResource struct {
+	Tags []string `json:"tags"`
 }
 
 // Represents the options available when searching for a customer
@@ -131,12 +137,20 @@ func (s *CustomerServiceOp) Search(options interface{}) ([]Customer, error) {
 	return resource.Customers, err
 }
 
-// List customer orders
+// ListOrders retrieves all orders from a customer
 func (s *CustomerServiceOp) ListOrders(customerID int64, options interface{}) ([]Order, error) {
 	path := fmt.Sprintf("%s/%d/orders.json", customersBasePath, customerID)
 	resource := new(OrdersResource)
 	err := s.client.Get(path, resource, options)
 	return resource.Orders, err
+}
+
+// ListTags retrieves all unique tags across all customers
+func (s *CustomerServiceOp) ListTags(options interface{}) ([]string, error) {
+	path := fmt.Sprintf("%s/tags.json", customersBasePath)
+	resource := new(CustomerTagsResource)
+	err := s.client.Get(path, resource, options)
+	return resource.Tags, err
 }
 
 // List metafields for a customer

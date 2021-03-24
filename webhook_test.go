@@ -1,11 +1,12 @@
 package goshopify
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
-	"gopkg.in/jarcoal/httpmock.v1"
+	"github.com/jarcoal/httpmock"
 )
 
 func webhookTests(t *testing.T, webhook Webhook) {
@@ -40,7 +41,7 @@ func TestWebhookList(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("GET", "https://fooshop.myshopify.com/admin/webhooks.json",
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://fooshop.myshopify.com/%s/webhooks.json", client.pathPrefix),
 		httpmock.NewBytesResponder(200, loadFixture("webhooks.json")))
 
 	webhooks, err := client.Webhook.List(nil)
@@ -60,7 +61,7 @@ func TestWebhookGet(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("GET", "https://fooshop.myshopify.com/admin/webhooks/4759306.json",
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://fooshop.myshopify.com/%s/webhooks/4759306.json", client.pathPrefix),
 		httpmock.NewBytesResponder(200, loadFixture("webhook.json")))
 
 	webhook, err := client.Webhook.Get(4759306, nil)
@@ -75,10 +76,14 @@ func TestWebhookCount(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("GET", "https://fooshop.myshopify.com/admin/webhooks/count.json",
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://fooshop.myshopify.com/%s/webhooks/count.json", client.pathPrefix),
 		httpmock.NewStringResponder(200, `{"count": 7}`))
 
-	httpmock.RegisterResponder("GET", "https://fooshop.myshopify.com/admin/webhooks/count.json?topic=orders%2Fpaid",
+	params := map[string]string{"topic": "orders/paid"}
+	httpmock.RegisterResponderWithQuery(
+		"GET",
+		fmt.Sprintf("https://fooshop.myshopify.com/%s/webhooks/count.json", client.pathPrefix),
+		params,
 		httpmock.NewStringResponder(200, `{"count": 2}`))
 
 	cnt, err := client.Webhook.Count(nil)
@@ -107,7 +112,7 @@ func TestWebhookCreate(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("POST", "https://fooshop.myshopify.com/admin/webhooks.json",
+	httpmock.RegisterResponder("POST", fmt.Sprintf("https://fooshop.myshopify.com/%s/webhooks.json", client.pathPrefix),
 		httpmock.NewBytesResponder(200, loadFixture("webhook.json")))
 
 	webhook := Webhook{
@@ -127,7 +132,7 @@ func TestWebhookUpdate(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("PUT", "https://fooshop.myshopify.com/admin/webhooks/4759306.json",
+	httpmock.RegisterResponder("PUT", fmt.Sprintf("https://fooshop.myshopify.com/%s/webhooks/4759306.json", client.pathPrefix),
 		httpmock.NewBytesResponder(200, loadFixture("webhook.json")))
 
 	webhook := Webhook{
@@ -148,7 +153,7 @@ func TestWebhookDelete(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("DELETE", "https://fooshop.myshopify.com/admin/webhooks/4759306.json",
+	httpmock.RegisterResponder("DELETE", fmt.Sprintf("https://fooshop.myshopify.com/%s/webhooks/4759306.json", client.pathPrefix),
 		httpmock.NewStringResponder(200, "{}"))
 
 	err := client.Webhook.Delete(4759306)

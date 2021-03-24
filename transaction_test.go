@@ -1,11 +1,12 @@
 package goshopify
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
+	"github.com/jarcoal/httpmock"
 	"github.com/shopspring/decimal"
-	httpmock "gopkg.in/jarcoal/httpmock.v1"
 )
 
 func TransactionTests(t *testing.T, transaction Transaction) {
@@ -130,7 +131,7 @@ func TestTransactionList(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("GET", "https://fooshop.myshopify.com/admin/orders/1/transactions.json",
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://fooshop.myshopify.com/%s/orders/1/transactions.json", client.pathPrefix),
 		httpmock.NewBytesResponder(200, loadFixture("transactions.json")))
 
 	transactions, err := client.Transaction.List(1, nil)
@@ -147,7 +148,7 @@ func TestTransactionCount(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("GET", "https://fooshop.myshopify.com/admin/orders/1/transactions/count.json",
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://fooshop.myshopify.com/%s/orders/1/transactions/count.json", client.pathPrefix),
 		httpmock.NewStringResponder(200, `{"count": 2}`))
 
 	cnt, err := client.Transaction.Count(1, nil)
@@ -165,7 +166,7 @@ func TestTransactionGet(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("GET", "https://fooshop.myshopify.com/admin/orders/1/transactions/1.json",
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://fooshop.myshopify.com/%s/orders/1/transactions/1.json", client.pathPrefix),
 		httpmock.NewBytesResponder(200, loadFixture("transaction.json")))
 
 	transaction, err := client.Transaction.Get(1, 1, nil)
@@ -180,7 +181,7 @@ func TestTransactionCreate(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("POST", "https://fooshop.myshopify.com/admin/orders/1/transactions.json",
+	httpmock.RegisterResponder("POST", fmt.Sprintf("https://fooshop.myshopify.com/%s/orders/1/transactions.json", client.pathPrefix),
 		httpmock.NewBytesResponder(200, loadFixture("transaction.json")))
 
 	amount := decimal.NewFromFloat(409.94)

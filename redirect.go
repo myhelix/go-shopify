@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-const redirectsBasePath = "admin/redirects"
+const redirectsBasePath = "redirects"
 
 // RedirectService is an interface for interacting with the redirects
 // endpoints of the Shopify API.
@@ -26,9 +26,9 @@ type RedirectServiceOp struct {
 
 // Redirect represents a Shopify redirect.
 type Redirect struct {
-	ID     int64  `json:"id,omitempty"`
-	Path   string `json:"path,omitempty"`
-	Target string `json:"target,omitempty"`
+	ID     int64  `json:"id"`
+	Path   string `json:"path"`
+	Target string `json:"target"`
 }
 
 // RedirectResource represents the result from the redirects/X.json endpoint

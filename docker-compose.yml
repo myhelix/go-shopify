@@ -1,8 +1,9 @@
-version: '2'
+version: '3.7'
 
 services:
-  dev:
+  test:
+    image: go-shopify:latest
     build: .
     command: go test -v -cover ./...
     volumes:
-      - .:/go/src/github.com/getconversio/go-shopify
+      - .:/go/src/github.com/bold-commerce/go-shopify

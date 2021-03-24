@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-const assetsBasePath = "admin/themes"
+const assetsBasePath = "themes"
 
 // AssetService is an interface for interfacing with the asset endpoints
 // of the Shopify API.

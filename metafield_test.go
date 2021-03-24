@@ -1,16 +1,17 @@
 package goshopify
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
-	httpmock "gopkg.in/jarcoal/httpmock.v1"
+	"github.com/jarcoal/httpmock"
 )
 
 func MetafieldTests(t *testing.T, metafield Metafield) {
 	// Check that ID is assigned to the returned metafield
-	expectedInt := int64(721389482)
+	expectedInt := int64(1)
 	if metafield.ID != expectedInt {
 		t.Errorf("Metafield.ID returned %+v, expected %+v", metafield.ID, expectedInt)
 	}
@@ -20,7 +21,7 @@ func TestMetafieldList(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("GET", "https://fooshop.myshopify.com/admin/metafields.json",
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://fooshop.myshopify.com/%s/metafields.json", client.pathPrefix),
 		httpmock.NewStringResponder(200, `{"metafields": [{"id":1},{"id":2}]}`))
 
 	metafields, err := client.Metafield.List(nil)
@@ -38,10 +39,14 @@ func TestMetafieldCount(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("GET", "https://fooshop.myshopify.com/admin/metafields/count.json",
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://fooshop.myshopify.com/%s/metafields/count.json", client.pathPrefix),
 		httpmock.NewStringResponder(200, `{"count": 3}`))
 
-	httpmock.RegisterResponder("GET", "https://fooshop.myshopify.com/admin/metafields/count.json?created_at_min=2016-01-01T00%3A00%3A00Z",
+	params := map[string]string{"created_at_min": "2016-01-01T00:00:00Z"}
+	httpmock.RegisterResponderWithQuery(
+		"GET",
+		fmt.Sprintf("https://fooshop.myshopify.com/%s/metafields/count.json", client.pathPrefix),
+		params,
 		httpmock.NewStringResponder(200, `{"count": 2}`))
 
 	cnt, err := client.Metafield.Count(nil)
@@ -70,15 +75,29 @@ func TestMetafieldGet(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("GET", "https://fooshop.myshopify.com/admin/metafields/1.json",
-		httpmock.NewStringResponder(200, `{"metafield": {"id":1}}`))
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://fooshop.myshopify.com/%s/metafields/1.json", client.pathPrefix),
+		httpmock.NewBytesResponder(200, loadFixture("metafield.json")))
 
 	metafield, err := client.Metafield.Get(1, nil)
 	if err != nil {
 		t.Errorf("Metafield.Get returned error: %v", err)
 	}
 
-	expected := &Metafield{ID: 1}
+	createdAt := time.Date(2016, time.January, 1, 0, 0, 0, 0, time.UTC)
+	updatedAt := time.Date(2016, time.January, 2, 0, 0, 0, 0, time.UTC)
+	expected := &Metafield{
+		ID:                1,
+		Key:               "app_key",
+		Value:             "app_value",
+		ValueType:         "string",
+		Namespace:         "affiliates",
+		Description:       "some amaaazing app's value",
+		OwnerId:           1,
+		CreatedAt:         &createdAt,
+		UpdatedAt:         &updatedAt,
+		OwnerResource:     "shop",
+		AdminGraphqlAPIID: "gid://shopify/Metafield/1",
+	}
 	if !reflect.DeepEqual(metafield, expected) {
 		t.Errorf("Metafield.Get returned %+v, expected %+v", metafield, expected)
 	}
@@ -88,7 +107,7 @@ func TestMetafieldCreate(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("POST", "https://fooshop.myshopify.com/admin/metafields.json",
+	httpmock.RegisterResponder("POST", fmt.Sprintf("https://fooshop.myshopify.com/%s/metafields.json", client.pathPrefix),
 		httpmock.NewBytesResponder(200, loadFixture("metafield.json")))
 
 	metafield := Metafield{
@@ -110,7 +129,7 @@ func TestMetafieldUpdate(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("PUT", "https://fooshop.myshopify.com/admin/metafields/1.json",
+	httpmock.RegisterResponder("PUT", fmt.Sprintf("https://fooshop.myshopify.com/%s/metafields/1.json", client.pathPrefix),
 		httpmock.NewBytesResponder(200, loadFixture("metafield.json")))
 
 	metafield := Metafield{
@@ -131,7 +150,7 @@ func TestMetafieldDelete(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder("DELETE", "https://fooshop.myshopify.com/admin/metafields/1.json",
+	httpmock.RegisterResponder("DELETE", fmt.Sprintf("https://fooshop.myshopify.com/%s/metafields/1.json", client.pathPrefix),
 		httpmock.NewStringResponder(200, "{}"))
 
 	err := client.Metafield.Delete(1)
