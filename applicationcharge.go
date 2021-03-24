@@ -7,7 +7,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-const applicationChargesBasePath = "admin/application_charges"
+const applicationChargesBasePath = "application_charges"
 
 // ApplicationChargeService is an interface for interacting with the
 // ApplicationCharge endpoints of the Shopify API.

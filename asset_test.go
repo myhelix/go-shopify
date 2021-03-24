@@ -1,10 +1,11 @@
 package goshopify
 
 import (
+	"fmt"
 	"reflect"
 	"testing"
 
-	"gopkg.in/jarcoal/httpmock.v1"
+	"github.com/jarcoal/httpmock"
 )
 
 func assetTests(t *testing.T, asset Asset) {
@@ -20,7 +21,7 @@ func TestAssetList(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"GET",
-		"https://fooshop.myshopify.com/admin/themes/1/assets.json",
+		fmt.Sprintf("https://fooshop.myshopify.com/%s/themes/1/assets.json", client.pathPrefix),
 		httpmock.NewStringResponder(
 			200,
 			`{"assets": [{"key":"assets\/1.liquid"},{"key":"assets\/2.liquid"}]}`,
@@ -41,10 +42,14 @@ func TestAssetList(t *testing.T) {
 func TestAssetGet(t *testing.T) {
 	setup()
 	defer teardown()
-
-	httpmock.RegisterResponder(
+	params := map[string]string{
+		"asset[key]": "foo/bar.liquid",
+		"theme_id":   "1",
+	}
+	httpmock.RegisterResponderWithQuery(
 		"GET",
-		"https://fooshop.myshopify.com/admin/themes/1/assets.json?asset%5Bkey%5D=foo%2Fbar.liquid&theme_id=1",
+		fmt.Sprintf("https://fooshop.myshopify.com/%s/themes/1/assets.json", client.pathPrefix),
+		params,
 		httpmock.NewStringResponder(
 			200,
 			`{"asset": {"key":"foo\/bar.liquid"}}`,
@@ -68,7 +73,7 @@ func TestAssetUpdate(t *testing.T) {
 
 	httpmock.RegisterResponder(
 		"PUT",
-		"https://fooshop.myshopify.com/admin/themes/1/assets.json",
+		fmt.Sprintf("https://fooshop.myshopify.com/%s/themes/1/assets.json", client.pathPrefix),
 		httpmock.NewBytesResponder(
 			200,
 			loadFixture("asset.json"),
@@ -93,9 +98,11 @@ func TestAssetDelete(t *testing.T) {
 	setup()
 	defer teardown()
 
-	httpmock.RegisterResponder(
+	params := map[string]string{"asset[key]": "foo/bar.liquid"}
+	httpmock.RegisterResponderWithQuery(
 		"DELETE",
-		"https://fooshop.myshopify.com/admin/themes/1/assets.json?asset[key]=foo/bar.liquid",
+		fmt.Sprintf("https://fooshop.myshopify.com/%s/themes/1/assets.json", client.pathPrefix),
+		params,
 		httpmock.NewStringResponder(200, "{}"),
 	)
 

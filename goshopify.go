@@ -5,10 +5,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"path"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -19,8 +22,18 @@ import (
 
 const (
 	UserAgent = "goshopify/1.0.0"
+	// UnstableApiVersion Shopify API version for accessing unstable API features
+	UnstableApiVersion = "unstable"
 
-	callLimitHeader = "X-Shopify-Shop-Api-Call-Limit"
+	// Shopify API version YYYY-MM - defaults to admin which uses the oldest stable version of the api
+	defaultApiPathPrefix = "admin"
+	defaultApiVersion    = "stable"
+	defaultHttpTimeout   = 10
+)
+
+var (
+	// version regex match
+	apiVersionRegex = regexp.MustCompile(`^[0-9]{4}-[0-9]{2}$`)
 )
 
 // App represents basic app settings such as Api key, secret, scope, and redirect url.
@@ -31,12 +44,20 @@ type App struct {
 	RedirectUrl string
 	Scope       string
 	Password    string
+	Client      *Client // see GetAccessToken
+}
+
+type RateLimitInfo struct {
+	RequestCount      int
+	BucketSize        int
+	RetryAfterSeconds float64
 }
 
 // Client manages communication with the Shopify API.
 type Client struct {
-	// HTTP client used to communicate with the DO API.
+	// HTTP client used to communicate with the Shopify API.
 	Client *http.Client
+	log    LeveledLoggerInterface
 
 	// App settings
 	app App
@@ -46,18 +67,30 @@ type Client struct {
 	// its own client.
 	baseURL *url.URL
 
+	// URL Prefix, defaults to "admin" see WithVersion
+	pathPrefix string
+
+	// version you're currently using of the api, defaults to "stable"
+	apiVersion string
+
 	// A permanent access token
 	token string
 
-	// A logger.
-	log Logger
+	// max number of retries, defaults to 0 for no retries see WithRetry option
+	retries  int
+	attempts int
+
+	RateLimits RateLimitInfo
 
 	// Services used for communicating with the API
 	Product                    ProductService
 	CustomCollection           CustomCollectionService
 	SmartCollection            SmartCollectionService
 	Customer                   CustomerService
+	CustomerAddress            CustomerAddressService
 	Order                      OrderService
+	Fulfillment                FulfillmentService
+	DraftOrder                 DraftOrderService
 	Shop                       ShopService
 	Webhook                    WebhookService
 	Variant                    VariantService
@@ -67,16 +100,21 @@ type Client struct {
 	Asset                      AssetService
 	ScriptTag                  ScriptTagService
 	RecurringApplicationCharge RecurringApplicationChargeService
+	UsageCharge                UsageChargeService
 	Metafield                  MetafieldService
 	Blog                       BlogService
 	ApplicationCharge          ApplicationChargeService
-	Page                       PageService
 	Redirect                   RedirectService
-	Fulfillment                FulfillmentService
+	Page                       PageService
+	StorefrontAccessToken      StorefrontAccessTokenService
+	Collect                    CollectService
+	Collection                 CollectionService
+	Location                   LocationService
 	DiscountCode               DiscountCodeService
 	PriceRule                  PriceRuleService
-	GiftCard                   GiftCardService
-	Location                   LocationService
+	InventoryItem              InventoryItemService
+	ShippingZone               ShippingZoneService
+	ProductListing             ProductListingService
 }
 
 // A general response error that follows a similar layout to Shopify's response
@@ -85,6 +123,21 @@ type ResponseError struct {
 	Status  int
 	Message string
 	Errors  []string
+}
+
+// GetStatus returns http  response status
+func (e ResponseError) GetStatus() int {
+	return e.Status
+}
+
+// GetMessage returns response error message
+func (e ResponseError) GetMessage() string {
+	return e.Message
+}
+
+// GetErrors returns response errors list
+func (e ResponseError) GetErrors() []string {
+	return e.Errors
 }
 
 func (e ResponseError) Error() string {
@@ -125,8 +178,8 @@ type RateLimitError struct {
 // be resolved to the BaseURL of the Client. Relative URLS should always be
 // specified without a preceding slash. If specified, the value pointed to by
 // body is JSON encoded and included as the request body.
-func (c *Client) NewRequest(method, urlStr string, body, options interface{}) (*http.Request, error) {
-	rel, err := url.Parse(urlStr)
+func (c *Client) NewRequest(method, relPath string, body, options interface{}) (*http.Request, error) {
+	rel, err := url.Parse(relPath)
 	if err != nil {
 		return nil, err
 	}
@@ -175,20 +228,43 @@ func (c *Client) NewRequest(method, urlStr string, body, options interface{}) (*
 	return req, nil
 }
 
+// NewClient returns a new Shopify API client with an already authenticated shopname and
+// token. The shopName parameter is the shop's myshopify domain,
+// e.g. "theshop.myshopify.com", or simply "theshop"
+// a.NewClient(shopName, token, opts) is equivalent to NewClient(a, shopName, token, opts)
+func (a App) NewClient(shopName, token string, opts ...Option) *Client {
+	return NewClient(a, shopName, token, opts...)
+}
+
 // Returns a new Shopify API client with an already authenticated shopname and
 // token. The shopName parameter is the shop's myshopify domain,
 // e.g. "theshop.myshopify.com", or simply "theshop"
-func NewClient(app App, shopName, token string) *Client {
-	httpClient := http.DefaultClient
+func NewClient(app App, shopName, token string, opts ...Option) *Client {
+	baseURL, err := url.Parse(ShopBaseUrl(shopName))
+	if err != nil {
+		panic(err) // something really wrong with shopName
+	}
 
-	baseURL, _ := url.Parse(ShopBaseUrl(shopName))
+	c := &Client{
+		Client: &http.Client{
+			Timeout: time.Second * defaultHttpTimeout,
+		},
+		log:        &LeveledLogger{},
+		app:        app,
+		baseURL:    baseURL,
+		token:      token,
+		apiVersion: defaultApiVersion,
+		pathPrefix: defaultApiPathPrefix,
+	}
 
-	c := &Client{Client: httpClient, app: app, baseURL: baseURL, token: token, log: &defaultLogger{}}
 	c.Product = &ProductServiceOp{client: c}
 	c.CustomCollection = &CustomCollectionServiceOp{client: c}
 	c.SmartCollection = &SmartCollectionServiceOp{client: c}
 	c.Customer = &CustomerServiceOp{client: c}
+	c.CustomerAddress = &CustomerAddressServiceOp{client: c}
 	c.Order = &OrderServiceOp{client: c}
+	c.Fulfillment = &FulfillmentServiceOp{client: c}
+	c.DraftOrder = &DraftOrderServiceOp{client: c}
 	c.Shop = &ShopServiceOp{client: c}
 	c.Webhook = &WebhookServiceOp{client: c}
 	c.Variant = &VariantServiceOp{client: c}
@@ -201,20 +277,24 @@ func NewClient(app App, shopName, token string) *Client {
 	c.Metafield = &MetafieldServiceOp{client: c}
 	c.Blog = &BlogServiceOp{client: c}
 	c.ApplicationCharge = &ApplicationChargeServiceOp{client: c}
-	c.Page = &PageServiceOp{client: c}
 	c.Redirect = &RedirectServiceOp{client: c}
-	c.Fulfillment = &FulfillmentServiceOp{client: c}
+	c.Page = &PageServiceOp{client: c}
+	c.StorefrontAccessToken = &StorefrontAccessTokenServiceOp{client: c}
+	c.UsageCharge = &UsageChargeServiceOp{client: c}
+	c.Collect = &CollectServiceOp{client: c}
+	c.Collection = &CollectionServiceOp{client: c}
+	c.Location = &LocationServiceOp{client: c}
 	c.DiscountCode = &DiscountCodeServiceOp{client: c}
 	c.PriceRule = &PriceRuleServiceOp{client: c}
-	c.GiftCard = &GiftCardServiceOp{client: c}
-	c.Location = &LocationServiceOp{client: c}
+	c.InventoryItem = &InventoryItemServiceOp{client: c}
+	c.ShippingZone = &ShippingZoneServiceOp{client: c}
+	c.ProductListing = &ProductListingServiceOp{client: c}
 
-	return c
-}
+	// apply any options
+	for _, opt := range opts {
+		opt(c)
+	}
 
-// WithLogger just sets logger and returns the Client.
-func (c *Client) WithLogger(l Logger) *Client {
-	c.log = l
 	return c
 }
 
@@ -222,48 +302,149 @@ func (c *Client) WithLogger(l Logger) *Client {
 // response. It does not make much sense to call Do without a prepared
 // interface instance.
 func (c *Client) Do(req *http.Request, v interface{}) error {
-	resp, err := c.Client.Do(req)
+	_, err := c.doGetHeaders(req, v)
 	if err != nil {
 		return err
 	}
+
+	return nil
+}
+
+// doGetHeaders executes a request, decoding the response into `v` and also returns any response headers.
+func (c *Client) doGetHeaders(req *http.Request, v interface{}) (http.Header, error) {
+	var resp *http.Response
+	var err error
+	retries := c.retries
+	c.attempts = 0
+	c.logRequest(req)
+
+	for {
+		c.attempts++
+		resp, err = c.Client.Do(req)
+		c.logResponse(resp)
+		if err != nil {
+			return nil, err //http client errors, not api responses
+		}
+
+		respErr := CheckResponseError(resp)
+		if respErr == nil {
+			break // no errors, break out of the retry loop
+		}
+
+		// retry scenario, close resp and any continue will retry
+		resp.Body.Close()
+
+		if retries <= 1 {
+			return nil, respErr
+		}
+
+		if rateLimitErr, isRetryErr := respErr.(RateLimitError); isRetryErr {
+			// back off and retry
+
+			wait := time.Duration(rateLimitErr.RetryAfter) * time.Second
+			c.log.Debugf("rate limited waiting %s", wait.String())
+			time.Sleep(wait)
+			retries--
+			continue
+		}
+
+		var doRetry bool
+		switch resp.StatusCode {
+		case http.StatusServiceUnavailable:
+			c.log.Debugf("service unavailable, retrying")
+			doRetry = true
+			retries--
+		}
+
+		if doRetry {
+			continue
+		}
+
+		// no retry attempts, just return the err
+		return nil, respErr
+	}
+
+	c.logResponse(resp)
 	defer resp.Body.Close()
 
-	err = CheckResponseError(resp)
-	if err != nil {
-		return err
-	}
-
-	if callLimit, ok := resp.Header[callLimitHeader]; ok {
-		c.log.Info("%s: %s", callLimitHeader, callLimit[0])
+	if c.apiVersion == defaultApiVersion && resp.Header.Get("X-Shopify-API-Version") != "" {
+		// if using stable on first request set the api version
+		c.apiVersion = resp.Header.Get("X-Shopify-API-Version")
+		c.log.Infof("api version not set, now using %s", c.apiVersion)
 	}
 
 	if v != nil {
 		decoder := json.NewDecoder(resp.Body)
 		err := decoder.Decode(&v)
 		if err != nil {
-			return err
+			return nil, err
 		}
 	}
 
-	return nil
+	if s := strings.Split(resp.Header.Get("X-Shopify-Shop-Api-Call-Limit"), "/"); len(s) == 2 {
+		c.RateLimits.RequestCount, _ = strconv.Atoi(s[0])
+		c.RateLimits.BucketSize, _ = strconv.Atoi(s[1])
+	}
+
+	c.RateLimits.RetryAfterSeconds, _ = strconv.ParseFloat(resp.Header.Get("Retry-After"), 64)
+
+	return resp.Header, nil
+}
+
+func (c *Client) logRequest(req *http.Request) {
+	if req == nil {
+		return
+	}
+	if req.URL != nil {
+		c.log.Debugf("%s: %s", req.Method, req.URL.String())
+	}
+	c.logBody(&req.Body, "SENT: %s")
+}
+
+func (c *Client) logResponse(res *http.Response) {
+	if res == nil {
+		return
+	}
+	c.log.Debugf("RECV %d: %s", res.StatusCode, res.Status)
+	c.logBody(&res.Body, "RESP: %s")
+}
+
+func (c *Client) logBody(body *io.ReadCloser, format string) {
+	if body == nil {
+		return
+	}
+	b, _ := ioutil.ReadAll(*body)
+	if len(b) > 0 {
+		c.log.Debugf(format, string(b))
+	}
+	*body = ioutil.NopCloser(bytes.NewBuffer(b))
 }
 
 func wrapSpecificError(r *http.Response, err ResponseError) error {
-	if err.Status == 429 {
-		f, _ := strconv.ParseFloat(r.Header.Get("retry-after"), 64)
+	// see https://www.shopify.dev/concepts/about-apis/response-codes
+	if err.Status == http.StatusTooManyRequests {
+		f, _ := strconv.ParseFloat(r.Header.Get("Retry-After"), 64)
 		return RateLimitError{
 			ResponseError: err,
 			RetryAfter:    int(f),
 		}
 	}
-	if err.Status == 406 {
-		err.Message = "Not acceptable"
+
+	// if err.Status == http.StatusSeeOther {
+	// todo
+	// The response to the request can be found under a different URL in the
+	// Location header and can be retrieved using a GET method on that resource.
+	// }
+
+	if err.Status == http.StatusNotAcceptable {
+		err.Message = http.StatusText(err.Status)
 	}
+
 	return err
 }
 
 func CheckResponseError(r *http.Response) error {
-	if r.StatusCode >= 200 && r.StatusCode < 300 {
+	if http.StatusOK <= r.StatusCode && r.StatusCode < http.StatusMultipleChoices {
 		return nil
 	}
 
@@ -330,9 +511,10 @@ func CheckResponseError(r *http.Response) error {
 		// A map, parse each error for each key in the map.
 		// json always serializes into map[string]interface{} for objects
 		for k, v := range shopifyError.Errors.(map[string]interface{}) {
+			switch reflect.TypeOf(v).Kind() {
 			// Check to make sure the interface is a slice
 			// json always serializes JSON arrays into []interface{}
-			if reflect.TypeOf(v).Kind() == reflect.Slice {
+			case reflect.Slice:
 				for _, elem := range v.([]interface{}) {
 					// If the primary message of the response error is not set, use
 					// any message.
@@ -342,6 +524,13 @@ func CheckResponseError(r *http.Response) error {
 					topicAndElem := fmt.Sprintf("%v: %v", k, elem)
 					responseError.Errors = append(responseError.Errors, topicAndElem)
 				}
+			case reflect.String:
+				elem := v.(string)
+				if responseError.Message == "" {
+					responseError.Message = fmt.Sprintf("%v: %v", k, elem)
+				}
+				topicAndElem := fmt.Sprintf("%v: %v", k, elem)
+				responseError.Errors = append(responseError.Errors, topicAndElem)
 			}
 		}
 	}
@@ -351,6 +540,12 @@ func CheckResponseError(r *http.Response) error {
 
 // General list options that can be used for most collections of entities.
 type ListOptions struct {
+
+	// PageInfo is used with new pagination search.
+	PageInfo string `url:"page_info,omitempty"`
+
+	// Page is used to specify a specific page to load.
+	// It is the deprecated way to do pagination.
 	Page         int       `url:"page,omitempty"`
 	Limit        int       `url:"limit,omitempty"`
 	SinceID      int64     `url:"since_id,omitempty"`
@@ -360,6 +555,8 @@ type ListOptions struct {
 	UpdatedAtMax time.Time `url:"updated_at_max,omitempty"`
 	Order        string    `url:"order,omitempty"`
 	Fields       string    `url:"fields,omitempty"`
+	Vendor       string    `url:"vendor,omitempty"`
+	IDs          []int64   `url:"ids,omitempty,comma"`
 }
 
 // General count options that can be used for most collection counts.
@@ -387,18 +584,28 @@ func (c *Client) Count(path string, options interface{}) (int, error) {
 // The options argument is used for specifying request options such as search
 // parameters like created_at_min
 // Any data returned from Shopify will be marshalled into resource argument.
-func (c *Client) CreateAndDo(method, path string, data, options, resource interface{}) error {
-	req, err := c.NewRequest(method, path, data, options)
+func (c *Client) CreateAndDo(method, relPath string, data, options, resource interface{}) error {
+	_, err := c.createAndDoGetHeaders(method, relPath, data, options, resource)
 	if err != nil {
 		return err
 	}
-
-	err = c.Do(req, resource)
-	if err != nil {
-		return err
-	}
-
 	return nil
+}
+
+// createAndDoGetHeaders creates an executes a request while returning the response headers.
+func (c *Client) createAndDoGetHeaders(method, relPath string, data, options, resource interface{}) (http.Header, error) {
+	if strings.HasPrefix(relPath, "/") {
+		// make sure it's a relative path
+		relPath = strings.TrimLeft(relPath, "/")
+	}
+
+	relPath = path.Join(c.pathPrefix, relPath)
+	req, err := c.NewRequest(method, relPath, data, options)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.doGetHeaders(req, resource)
 }
 
 // Get performs a GET request for the given path and saves the result in the

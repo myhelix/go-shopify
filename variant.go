@@ -7,7 +7,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-const variantsBasePath = "admin/variants"
+const variantsBasePath = "variants"
 const variantsResourceName = "variants"
 
 // VariantService is an interface for interacting with the variant endpoints
@@ -22,7 +22,7 @@ type VariantService interface {
 	Delete(int64, int64) error
 
 	// MetafieldsService used for Variant resource to communicate with Metafields resource
-	VariantMetafieldsService
+	MetafieldsService
 }
 
 // VariantServiceOp handles communication with the variant related methods of
@@ -44,12 +44,14 @@ type Variant struct {
 	CompareAtPrice       *decimal.Decimal `json:"compare_at_price,omitempty"`
 	FulfillmentService   string           `json:"fulfillment_service,omitempty"`
 	InventoryManagement  string           `json:"inventory_management,omitempty"`
+	InventoryItemId      int64            `json:"inventory_item_id,omitempty"`
 	Option1              string           `json:"option1,omitempty"`
 	Option2              string           `json:"option2,omitempty"`
 	Option3              string           `json:"option3,omitempty"`
 	CreatedAt            *time.Time       `json:"created_at,omitempty"`
 	UpdatedAt            *time.Time       `json:"updated_at,omitempty"`
 	Taxable              bool             `json:"taxable,omitempty"`
+	TaxCode              string           `json:"tax_code,omitempty"`
 	Barcode              string           `json:"barcode,omitempty"`
 	ImageID              int64            `json:"image_id,omitempty"`
 	InventoryQuantity    int              `json:"inventory_quantity,omitempty"`
@@ -57,6 +59,7 @@ type Variant struct {
 	WeightUnit           string           `json:"weight_unit,omitempty"`
 	OldInventoryQuantity int              `json:"old_inventory_quantity,omitempty"`
 	RequireShipping      bool             `json:"requires_shipping,omitempty"`
+	AdminGraphqlAPIID    string           `json:"admin_graphql_api_id,omitempty"`
 	Metafields           []Metafield      `json:"metafields,omitempty"`
 }
 
@@ -115,44 +118,38 @@ func (s *VariantServiceOp) Delete(productID int64, variantID int64) error {
 	return s.client.Delete(fmt.Sprintf("%s/%d/variants/%d.json", productsBasePath, productID, variantID))
 }
 
-// List metafields for a variant
-func (s *VariantServiceOp) ListMetafields(productID int64, variantID int64, options interface{}) ([]Metafield, error) {
-	variantMetafieldResource := fmt.Sprintf("products/%d/variants", productID)
-	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantMetafieldResource, resourceID: variantID}
+// ListMetafields for a variant
+func (s *VariantServiceOp) ListMetafields(variantID int64, options interface{}) ([]Metafield, error) {
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantsResourceName, resourceID: variantID}
 	return metafieldService.List(options)
 }
 
-// Count metafields for a variant
-func (s *VariantServiceOp) CountMetafields(productID int64, variantID int64, options interface{}) (int, error) {
-	variantMetafieldResource := fmt.Sprintf("products/%d/variants", productID)
-	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantMetafieldResource, resourceID: variantID}
+// CountMetafields for a variant
+func (s *VariantServiceOp) CountMetafields(variantID int64, options interface{}) (int, error) {
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantsResourceName, resourceID: variantID}
 	return metafieldService.Count(options)
 }
 
-// Get individual metafield for a variant
-func (s *VariantServiceOp) GetMetafield(productID int64, variantID int64, metafieldID int64, options interface{}) (*Metafield, error) {
-	variantMetafieldResource := fmt.Sprintf("products/%d/variants", productID)
-	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantMetafieldResource, resourceID: variantID}
+// GetMetafield for a variant
+func (s *VariantServiceOp) GetMetafield(variantID int64, metafieldID int64, options interface{}) (*Metafield, error) {
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantsResourceName, resourceID: variantID}
 	return metafieldService.Get(metafieldID, options)
 }
 
-// Create a new metafield for a variant
-func (s *VariantServiceOp) CreateMetafield(productID int64, variantID int64, metafield Metafield) (*Metafield, error) {
-	variantMetafieldResource := fmt.Sprintf("products/%d/variants", productID)
-	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantMetafieldResource, resourceID: variantID}
+// CreateMetafield for a variant
+func (s *VariantServiceOp) CreateMetafield(variantID int64, metafield Metafield) (*Metafield, error) {
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantsResourceName, resourceID: variantID}
 	return metafieldService.Create(metafield)
 }
 
-// Update an existing metafield for a variant
-func (s *VariantServiceOp) UpdateMetafield(productID int64, variantID int64, metafield Metafield) (*Metafield, error) {
-	variantMetafieldResource := fmt.Sprintf("products/%d/variants", productID)
-	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantMetafieldResource, resourceID: variantID}
+// UpdateMetafield for a variant
+func (s *VariantServiceOp) UpdateMetafield(variantID int64, metafield Metafield) (*Metafield, error) {
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantsResourceName, resourceID: variantID}
 	return metafieldService.Update(metafield)
 }
 
-// Delete an existing metafield for a variant
-func (s *VariantServiceOp) DeleteMetafield(productID int64, variantID int64, metafieldID int64) error {
-	variantMetafieldResource := fmt.Sprintf("products/%d/variants", productID)
-	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantMetafieldResource, resourceID: variantID}
+// DeleteMetafield for a variant
+func (s *VariantServiceOp) DeleteMetafield(variantID int64, metafieldID int64) error {
+	metafieldService := &MetafieldServiceOp{client: s.client, resource: variantsResourceName, resourceID: variantID}
 	return metafieldService.Delete(metafieldID)
 }

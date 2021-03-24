@@ -1,22 +1,32 @@
 # go-shopify
 
-Another Shopify Api Library in Go.
+The new home of Conversio's Shopify Go library.
 
-**Note**: The library does not have implementations of all Shopify resources, but it is being used in production by Conversio and should be stable for usage. PRs for new resources and endpoints are welcome, or you can simply implement some yourself as-you-go. See the section "Using your own models" for more info.
+**Note**: The library does not have implementations of all Shopify resources, but it is being used in production and should be stable for usage. PRs for new resources and endpoints are welcome, or you can simply implement some yourself as-you-go. See the section "Using your own models" for more info.
 
-[![Build Status](https://travis-ci.org/getconversio/go-shopify.svg?branch=master)](https://travis-ci.org/getconversio/go-shopify)
-[![codecov](https://codecov.io/gh/getconversio/go-shopify/branch/master/graph/badge.svg)](https://codecov.io/gh/getconversio/go-shopify)
+[![Build Status](https://travis-ci.org/bold-commerce/go-shopify.svg?branch=master)](https://travis-ci.org/bold-commerce/go-shopify)
+[![codecov](https://codecov.io/gh/bold-commerce/go-shopify/branch/master/graph/badge.svg)](https://codecov.io/gh/bold-commerce/go-shopify) [![Join the chat at https://gitter.im/bold-commerce/go-shopify](https://badges.gitter.im/bold-commerce/go-shopify.svg)](https://gitter.im/bold-commerce/go-shopify?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
+## Supported Go Versions
+
+This library has been tested against the following versions of Go
+* 1.10
+* 1.11
+* 1.12
+* 1.13
+* 1.14
+* 1.15
 
 ## Install
 
 ```console
-$ go get github.com/getconversio/go-shopify
+$ go get github.com/bold-commerce/go-shopify
 ```
 
 ## Use
 
 ```go
-import "github.com/getconversio/go-shopify"
+import "github.com/bold-commerce/go-shopify"
 ```
 
 This gives you access to the `goshopify` package.
@@ -39,7 +49,8 @@ app := goshopify.App{
 // In some request handler, you probably want something like this:
 func MyHandler(w http.ResponseWriter, r *http.Request) {
     shopName := r.URL.Query().Get("shop")
-    authUrl := app.AuthorizeURL(shopName)
+    state := "nonce"
+    authUrl := app.AuthorizeUrl(shopName, state)
     http.Redirect(w, r, authUrl, http.StatusFound)
 }
 
@@ -97,6 +108,29 @@ client := goshopify.NewClient(app, "shopname", "")
 // Fetch the number of products.
 numProducts, err := client.Product.Count(nil)
 ```
+### Client Options
+When creating a client there are configuration options you can pass to NewClient. Simply use the last variadic param and 
+pass in the built in options or create your own and manipulate the client. See [options.go](https://github.com/bold-commerce/go-shopify/blob/master/options.go)
+for more details.
+
+#### WithVersion
+Read more details on the [Shopify API Versioning](https://shopify.dev/concepts/about-apis/versioning)
+to understand the format and release schedules. You can use `WithVersion` to specify a specific version 
+of the API. If you do not use this option you will be defaulted to the oldest stable API.
+
+```go
+client := goshopify.NewClient(app, "shopname", "", goshopify.WithVersion("2019-04"))
+```
+
+#### WithRetry
+Shopify [Rate Limits](https://shopify.dev/concepts/about-apis/rate-limits) their API and if this happens to you they 
+will send a back off (usually 2s) to tell you to retry your request. To support this functionality seamlessly within 
+the client a `WithRetry` option exists where you can pass an `int` of how many times you wish to retry per-request 
+before returning an error. `WithRetry` additionally supports retrying HTTP503 errors.
+
+```go
+client := goshopify.NewClient(app, "shopname", "", goshopify.WithRetry(3))
+```
 
 #### Query options
 
@@ -141,7 +175,7 @@ For example, let's say you want to fetch webhooks. There's a helper function
 ```go
 // Declare a model for the webhook
 type Webhook struct {
-    ID int64         `json:"id"`
+    ID int         `json:"id"`
     Address string `json:"address"`
 }
 
@@ -152,7 +186,7 @@ type WebhooksResource struct {
 
 func FetchWebhooks() ([]Webhook, error) {
     path := "admin/webhooks.json"
-    resource := new(WebhooksResoure)
+    resource := new(WebhooksResource)
     client := goshopify.NewClient(app, "shopname", "token")
 
     // resource gets modified when calling Get
@@ -176,14 +210,40 @@ func ValidateWebhook(httpRequest *http.Request) (bool) {
 ```
 
 ## Develop and test
+`docker` and `docker-compose` must be installed
 
-There's nothing special to note about the tests except that if you have Docker
-and Compose installed, you can test like this:
+### Mac/Linux/Windows with make
+Using the make file is the easiest way to get started with the tests and wraps the manual steps below with easy to use
+make commands.
 
-    $ docker-compose build dev
-    $ docker-compose run --rm dev
+```shell
+make && make test
+```
+#### Makefile goals
+* `make` or `make container`: default goal is to make the `go-shopify:latest` build container
+* `make test`: run go test in the container
+* `make clean`: deletes the `go-shopify:latest` image and coverage output
+* `make coverage`: generates the coverage.html and opens it
 
-Testing the package is the default command for the dev container. To create a
-coverage profile:
+### Manually
+To run the tests you will need the `go-shopify:latest` image built to run your tests, to do this run
+```
+docker-compose build test
+```
 
-    $ docker-compose run --rm dev bash -c 'go test -coverprofile=coverage.out ./... && go tool cover -html coverage.out -o coverage.html'
+To run tests you can use run
+```shell
+docker-compose run --rm tests
+```
+
+To create a coverage profile run the following to generate a coverage.html
+```
+docker-compose run --rm dev sh -c 'go test -coverprofile=coverage.out ./... && go tool cover -html coverage.out -o coverage.html'
+```
+
+When done testing and you want to cleanup simply run
+```
+docker image rm go-shopify:latest
+```
+
+Read the docker-compose.yml and Dockerfile for further details.

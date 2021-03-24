@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-const scriptTagsBasePath = "admin/script_tags"
+const scriptTagsBasePath = "script_tags"
 
 // ScriptTagService is an interface for interfacing with the ScriptTag endpoints
 // of the Shopify API.

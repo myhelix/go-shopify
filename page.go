@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-const pagesBasePath = "admin/pages"
+const pagesBasePath = "pages"
 const pagesResourceName = "pages"
 
 // PagesPageService is an interface for interacting with the pages

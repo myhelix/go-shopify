@@ -6,12 +6,16 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
+	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 )
 
 const shopifyChecksumHeader = "X-Shopify-Hmac-Sha256"
+
+var accessTokenRelPath = "admin/oauth/access_token"
 
 // Returns a Shopify oauth authorization url for the given shopname and state.
 //
@@ -35,17 +39,24 @@ func (app App) GetAccessToken(shopName string, code string) (string, error) {
 	}
 
 	data := struct {
-		ClientID     string `json:"client_id"`
+		ClientId     string `json:"client_id"`
 		ClientSecret string `json:"client_secret"`
 		Code         string `json:"code"`
 	}{
-		ClientID:     app.ApiKey,
+		ClientId:     app.ApiKey,
 		ClientSecret: app.ApiSecret,
 		Code:         code,
 	}
 
-	client := NewClient(app, shopName, "")
-	req, err := client.NewRequest("POST", "admin/oauth/access_token", data, nil)
+	client := app.Client
+	if client == nil {
+		client = NewClient(app, shopName, "")
+	}
+
+	req, err := client.NewRequest("POST", accessTokenRelPath, data, nil)
+	if err != nil {
+		return "", err
+	}
 
 	token := new(Token)
 	err = client.Do(req, token)
@@ -92,4 +103,48 @@ func (app App) VerifyWebhookRequest(httpRequest *http.Request) bool {
 	expectedMac := []byte(base64.StdEncoding.EncodeToString(macSum))
 
 	return hmac.Equal(actualMac, expectedMac)
+}
+
+// Verifies a webhook http request, sent by Shopify.
+// The body of the request is still readable after invoking the method.
+// This method has more verbose error output which is useful for debugging.
+func (app App) VerifyWebhookRequestVerbose(httpRequest *http.Request) (bool, error) {
+	if app.ApiSecret == "" {
+		return false, errors.New("ApiSecret is empty")
+	}
+
+	shopifySha256 := httpRequest.Header.Get(shopifyChecksumHeader)
+	if shopifySha256 == "" {
+		return false, fmt.Errorf("header %s not set", shopifyChecksumHeader)
+	}
+
+	decodedReceivedHMAC, err := base64.StdEncoding.DecodeString(shopifySha256)
+	if err != nil {
+		return false, err
+	}
+	if len(decodedReceivedHMAC) != 32 {
+		return false, fmt.Errorf("received HMAC is not of length 32, it is of length %d", len(decodedReceivedHMAC))
+	}
+
+	mac := hmac.New(sha256.New, []byte(app.ApiSecret))
+	requestBody, err := ioutil.ReadAll(httpRequest.Body)
+	if err != nil {
+		return false, err
+	}
+
+	httpRequest.Body = ioutil.NopCloser(bytes.NewBuffer(requestBody))
+	if len(requestBody) == 0 {
+		return false, errors.New("request body is empty")
+	}
+
+	// Sha256 write doesn't actually return an error
+	mac.Write(requestBody)
+
+	computedHMAC := mac.Sum(nil)
+	HMACSame := hmac.Equal(decodedReceivedHMAC, computedHMAC)
+	if !HMACSame {
+		return HMACSame, fmt.Errorf("expected hash %x does not equal %x", computedHMAC, decodedReceivedHMAC)
+	}
+
+	return HMACSame, nil
 }

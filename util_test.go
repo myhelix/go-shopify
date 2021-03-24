@@ -1,6 +1,8 @@
 package goshopify
 
-import "testing"
+import (
+	"testing"
+)
 
 func TestShopFullName(t *testing.T) {
 	cases := []struct {
@@ -69,8 +71,8 @@ func TestMetafieldPathPrefix(t *testing.T) {
 		resourceID int64
 		expected   string
 	}{
-		{"", 0, "admin/metafields"},
-		{"products", 123, "admin/products/123/metafields"},
+		{"", 0, "metafields"},
+		{"products", 123, "products/123/metafields"},
 	}
 
 	for _, c := range cases {
@@ -87,8 +89,8 @@ func TestFulfillmentPathPrefix(t *testing.T) {
 		resourceID int64
 		expected   string
 	}{
-		{"", 0, "admin/fulfillments"},
-		{"orders", 123, "admin/orders/123/fulfillments"},
+		{"", 0, "fulfillments"},
+		{"orders", 123, "orders/123/fulfillments"},
 	}
 
 	for _, c := range cases {

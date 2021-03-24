@@ -8,7 +8,7 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-const recurringApplicationChargesBasePath = "admin/recurring_application_charges"
+const recurringApplicationChargesBasePath = "recurring_application_charges"
 
 // RecurringApplicationChargeService is an interface for interacting with the
 // RecurringApplicationCharge endpoints of the Shopify API.
@@ -19,7 +19,7 @@ type RecurringApplicationChargeService interface {
 	List(interface{}) ([]RecurringApplicationCharge, error)
 	Activate(RecurringApplicationCharge) (*RecurringApplicationCharge, error)
 	Delete(int64) error
-	Update(int, int) (*RecurringApplicationCharge, error)
+	Update(int64, int64) (*RecurringApplicationCharge, error)
 }
 
 // RecurringApplicationChargeServiceOp handles communication with the
@@ -172,7 +172,7 @@ func (r *RecurringApplicationChargeServiceOp) Delete(chargeID int64) error {
 }
 
 // Update updates recurring application charge.
-func (r *RecurringApplicationChargeServiceOp) Update(chargeID, newCappedAmount int) (
+func (r *RecurringApplicationChargeServiceOp) Update(chargeID, newCappedAmount int64) (
 	*RecurringApplicationCharge, error) {
 
 	path := fmt.Sprintf("%s/%d/customize.json?recurring_application_charge[capped_amount]=%d",

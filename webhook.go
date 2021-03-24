@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-const webhooksBasePath = "admin/webhooks"
+const webhooksBasePath = "webhooks"
 
 // WebhookService is an interface for interfacing with the webhook endpoints of
 // the Shopify API.
@@ -94,6 +94,6 @@ func (s *WebhookServiceOp) Update(webhook Webhook) (*Webhook, error) {
 }
 
 // Delete an existing webhooks
-func (s *WebhookServiceOp) Delete(id int64) error {
-	return s.client.Delete(fmt.Sprintf("%s/%d.json", webhooksBasePath, id))
+func (s *WebhookServiceOp) Delete(ID int64) error {
+	return s.client.Delete(fmt.Sprintf("%s/%d.json", webhooksBasePath, ID))
 }
