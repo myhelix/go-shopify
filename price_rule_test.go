@@ -99,7 +99,7 @@ func TestPriceRuleListWithPagination(t *testing.T) {
 	}{
 		// Expect empty pagination when there is no link header
 		{
-			`{"priceRules": [{"id":1},{"id":2}]}`,
+			`{"price_rules": [{"id":1},{"id":2}]}`,
 			"",
 			[]PriceRule{{ID: 1}, {ID: 2}},
 			new(Pagination),
@@ -143,7 +143,7 @@ func TestPriceRuleListWithPagination(t *testing.T) {
 		},
 		// Valid link header responses
 		{
-			`{"priceRules": [{"id":1}]}`,
+			`{"price_rules": [{"id":1}]}`,
 			`<http://valid.url?page_info=foo&limit=2>; rel="next"`,
 			[]PriceRule{{ID: 1}},
 			&Pagination{
@@ -152,7 +152,7 @@ func TestPriceRuleListWithPagination(t *testing.T) {
 			nil,
 		},
 		{
-			`{"priceRules": [{"id":2}]}`,
+			`{"price_rules": [{"id":2}]}`,
 			`<http://valid.url?page_info=foo>; rel="next", <http://valid.url?page_info=bar>; rel="previous"`,
 			[]PriceRule{{ID: 2}},
 			&Pagination{
