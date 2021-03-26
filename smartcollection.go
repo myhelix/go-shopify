@@ -2,6 +2,7 @@ package goshopify
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 )
 
@@ -13,6 +14,7 @@ const smartCollectionsResourceName = "collections"
 // See https://help.shopify.com/api/reference/smartcollection
 type SmartCollectionService interface {
 	List(interface{}) ([]SmartCollection, error)
+	ListWithPagination(interface{}) ([]SmartCollection, *Pagination, error)
 	Count(interface{}) (int, error)
 	Get(int64, interface{}) (*SmartCollection, error)
 	Create(SmartCollection) (*SmartCollection, error)
@@ -65,10 +67,33 @@ type SmartCollectionsResource struct {
 
 // List smart collections
 func (s *SmartCollectionServiceOp) List(options interface{}) ([]SmartCollection, error) {
+	smartCollections, _, err := s.ListWithPagination(options)
+	if err != nil {
+		return nil, err
+	}
+	return smartCollections, nil
+}
+
+// List smart collections with pagination
+func (s *SmartCollectionServiceOp) ListWithPagination(options interface{}) ([]SmartCollection, *Pagination, error) {
 	path := fmt.Sprintf("%s.json", smartCollectionsBasePath)
 	resource := new(SmartCollectionsResource)
-	err := s.client.Get(path, resource, options)
-	return resource.Collections, err
+	headers := http.Header{}
+
+	headers, err := s.client.createAndDoGetHeaders("GET", path, nil, options, resource)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Extract pagination info from header
+	linkHeader := headers.Get("Link")
+
+	pagination, err := extractPagination(linkHeader)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return resource.Collections, pagination, nil
 }
 
 // Count smart collections
