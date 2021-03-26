@@ -72,7 +72,7 @@ func TestMetafieldListWithPagination(t *testing.T) {
 	cases := []struct {
 		body               string
 		linkHeader         string
-		expectedMetafields   []Metafield
+		expectedMetafields []Metafield
 		expectedPagination *Pagination
 		expectedErr        error
 	}{

@@ -2,6 +2,7 @@ package goshopify
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 )
 
@@ -13,6 +14,7 @@ const pagesResourceName = "pages"
 // See https://help.shopify.com/api/reference/online_store/page
 type PageService interface {
 	List(interface{}) ([]Page, error)
+	ListWithPagination(interface{}) ([]Page, *Pagination, error)
 	Count(interface{}) (int, error)
 	Get(int64, interface{}) (*Page, error)
 	Create(Page) (*Page, error)
@@ -57,10 +59,33 @@ type PagesResource struct {
 
 // List pages
 func (s *PageServiceOp) List(options interface{}) ([]Page, error) {
+	pages, _, err := s.ListWithPagination(options)
+	if err != nil {
+		return nil, err
+	}
+	return pages, nil
+}
+
+// List pages with pagination
+func (s *PageServiceOp) ListWithPagination(options interface{}) ([]Page, *Pagination, error) {
 	path := fmt.Sprintf("%s.json", pagesBasePath)
 	resource := new(PagesResource)
-	err := s.client.Get(path, resource, options)
-	return resource.Pages, err
+	headers := http.Header{}
+
+	headers, err := s.client.createAndDoGetHeaders("GET", path, nil, options, resource)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Extract pagination info from header
+	linkHeader := headers.Get("Link")
+
+	pagination, err := extractPagination(linkHeader)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return resource.Pages, pagination, nil
 }
 
 // Count pages
