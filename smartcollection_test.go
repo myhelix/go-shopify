@@ -87,11 +87,11 @@ func TestSmartCollectionListWithPagination(t *testing.T) {
 	}
 
 	cases := []struct {
-		body               string
-		linkHeader         string
-		expectedSmartCollections   []SmartCollection
-		expectedPagination *Pagination
-		expectedErr        error
+		body                     string
+		linkHeader               string
+		expectedSmartCollections []SmartCollection
+		expectedPagination       *Pagination
+		expectedErr              error
 	}{
 		// Expect empty pagination when there is no link header
 		{
