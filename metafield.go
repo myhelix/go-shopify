@@ -66,11 +66,6 @@ type MetafieldsResource struct {
 
 // List metafields
 func (s *MetafieldServiceOp) List(options interface{}) ([]Metafield, error) {
-	//prefix := MetafieldPathPrefix(s.resource, s.resourceID)
-	//path := fmt.Sprintf("%s.json", prefix)
-	//resource := new(MetafieldsResource)
-	//err := s.client.Get(path, resource, options)
-	//return resource.Metafields, err
 	metafields, _, err := s.ListWithPagination(options)
 	if err != nil {
 		return nil, err
