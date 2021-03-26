@@ -2,6 +2,7 @@ package goshopify
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 )
 
@@ -10,6 +11,7 @@ import (
 // https://help.shopify.com/api/reference/metafield
 type MetafieldService interface {
 	List(interface{}) ([]Metafield, error)
+	ListWithPagination(interface{}) ([]Metafield, *Pagination, error)
 	Count(interface{}) (int, error)
 	Get(int64, interface{}) (*Metafield, error)
 	Create(Metafield) (*Metafield, error)
@@ -64,11 +66,34 @@ type MetafieldsResource struct {
 
 // List metafields
 func (s *MetafieldServiceOp) List(options interface{}) ([]Metafield, error) {
+	metafields, _, err := s.ListWithPagination(options)
+	if err != nil {
+		return nil, err
+	}
+	return metafields, nil
+}
+
+// List metafields with pagination
+func (s *MetafieldServiceOp) ListWithPagination(options interface{}) ([]Metafield, *Pagination, error) {
 	prefix := MetafieldPathPrefix(s.resource, s.resourceID)
 	path := fmt.Sprintf("%s.json", prefix)
 	resource := new(MetafieldsResource)
-	err := s.client.Get(path, resource, options)
-	return resource.Metafields, err
+	headers := http.Header{}
+
+	headers, err := s.client.createAndDoGetHeaders("GET", path, nil, options, resource)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Extract pagination info from header
+	linkHeader := headers.Get("Link")
+
+	pagination, err := extractPagination(linkHeader)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return resource.Metafields, pagination, nil
 }
 
 // Count metafields
