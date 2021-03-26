@@ -63,8 +63,9 @@ type Fulfillment struct {
 
 // Receipt represents a Shopify receipt.
 type Receipt struct {
-	TestCase      bool   `json:"testcase,omitempty"`
-	Authorization string `json:"authorization,omitempty"`
+	TestCase      bool       `json:"testcase,omitempty"`
+	Authorization string     `json:"authorization,omitempty"`
+	GiftCards     []GiftCard `json:"gift_cards,omitempty"`
 }
 
 // FulfillmentResource represents the result from the fulfillments/X.json endpoint
