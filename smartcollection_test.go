@@ -1,8 +1,11 @@
 package goshopify
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
 	"reflect"
+	"runtime"
 	"testing"
 	"time"
 
@@ -49,6 +52,145 @@ func TestSmartCollectionList(t *testing.T) {
 	expected := []SmartCollection{{ID: 1}, {ID: 2}}
 	if !reflect.DeepEqual(collections, expected) {
 		t.Errorf("SmartCollection.List returned %+v, expected %+v", collections, expected)
+	}
+}
+
+func TestSmartCollectionListError(t *testing.T) {
+	setup()
+	defer teardown()
+
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://fooshop.myshopify.com/%s/smart_collections.json", client.pathPrefix),
+		httpmock.NewStringResponder(500, ""))
+
+	expectedErrMessage := "Unknown Error"
+
+	smartCollections, err := client.SmartCollection.List(nil)
+	if smartCollections != nil {
+		t.Errorf("SmartCollection.List returned smart collections, expected nil: %v", err)
+	}
+
+	if err == nil || err.Error() != expectedErrMessage {
+		t.Errorf("SmartCollection.List err returned %+v, expected %+v", err, expectedErrMessage)
+	}
+}
+
+func TestSmartCollectionListWithPagination(t *testing.T) {
+	setup()
+	defer teardown()
+
+	listURL := fmt.Sprintf("https://fooshop.myshopify.com/%s/smart_collections.json", client.pathPrefix)
+
+	// The strconv.Atoi error changed in go 1.8, 1.7 is still being tested/supported.
+	limitConversionErrorMessage := `strconv.Atoi: parsing "invalid": invalid syntax`
+	if runtime.Version()[2:5] == "1.7" {
+		limitConversionErrorMessage = `strconv.ParseInt: parsing "invalid": invalid syntax`
+	}
+
+	cases := []struct {
+		body               string
+		linkHeader         string
+		expectedSmartCollections   []SmartCollection
+		expectedPagination *Pagination
+		expectedErr        error
+	}{
+		// Expect empty pagination when there is no link header
+		{
+			`{"smart_collections": [{"id":1},{"id":2}]}`,
+			"",
+			[]SmartCollection{{ID: 1}, {ID: 2}},
+			new(Pagination),
+			nil,
+		},
+		// Invalid link header responses
+		{
+			"{}",
+			"invalid link",
+			[]SmartCollection(nil),
+			nil,
+			ResponseDecodingError{Message: "could not extract pagination link header"},
+		},
+		{
+			"{}",
+			`<:invalid.url>; rel="next"`,
+			[]SmartCollection(nil),
+			nil,
+			ResponseDecodingError{Message: "pagination does not contain a valid URL"},
+		},
+		{
+			"{}",
+			`<http://valid.url?%invalid_query>; rel="next"`,
+			[]SmartCollection(nil),
+			nil,
+			errors.New(`invalid URL escape "%in"`),
+		},
+		{
+			"{}",
+			`<http://valid.url>; rel="next"`,
+			[]SmartCollection(nil),
+			nil,
+			ResponseDecodingError{Message: "page_info is missing"},
+		},
+		{
+			"{}",
+			`<http://valid.url?page_info=foo&limit=invalid>; rel="next"`,
+			[]SmartCollection(nil),
+			nil,
+			errors.New(limitConversionErrorMessage),
+		},
+		// Valid link header responses
+		{
+			`{"smart_collections": [{"id":1}]}`,
+			`<http://valid.url?page_info=foo&limit=2>; rel="next"`,
+			[]SmartCollection{{ID: 1}},
+			&Pagination{
+				NextPageOptions: &ListOptions{PageInfo: "foo", Limit: 2},
+			},
+			nil,
+		},
+		{
+			`{"smart_collections": [{"id":2}]}`,
+			`<http://valid.url?page_info=foo>; rel="next", <http://valid.url?page_info=bar>; rel="previous"`,
+			[]SmartCollection{{ID: 2}},
+			&Pagination{
+				NextPageOptions:     &ListOptions{PageInfo: "foo"},
+				PreviousPageOptions: &ListOptions{PageInfo: "bar"},
+			},
+			nil,
+		},
+	}
+	for i, c := range cases {
+		response := &http.Response{
+			StatusCode: 200,
+			Body:       httpmock.NewRespBodyFromString(c.body),
+			Header: http.Header{
+				"Link": {c.linkHeader},
+			},
+		}
+
+		httpmock.RegisterResponder("GET", listURL, httpmock.ResponderFromResponse(response))
+
+		smartCollections, pagination, err := client.SmartCollection.ListWithPagination(nil)
+		if !reflect.DeepEqual(smartCollections, c.expectedSmartCollections) {
+			t.Errorf("test %d SmartCollection.ListWithPagination smart collections returned %+v, expected %+v", i, smartCollections, c.expectedSmartCollections)
+		}
+
+		if !reflect.DeepEqual(pagination, c.expectedPagination) {
+			t.Errorf(
+				"test %d SmartCollection.ListWithPagination pagination returned %+v, expected %+v",
+				i,
+				pagination,
+				c.expectedPagination,
+			)
+		}
+
+		if (c.expectedErr != nil || err != nil) && err.Error() != c.expectedErr.Error() {
+			t.Errorf(
+				"test %d SmartCollection.ListWithPagination err returned %+v, expected %+v",
+				i,
+				err,
+				c.expectedErr,
+			)
+		}
 	}
 }
 
