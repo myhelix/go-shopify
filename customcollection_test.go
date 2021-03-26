@@ -84,11 +84,11 @@ func TestCustomCollectionWithPagination(t *testing.T) {
 	}
 
 	cases := []struct {
-		body               string
-		linkHeader         string
-		expectedCustomCollections   []CustomCollection
-		expectedPagination *Pagination
-		expectedErr        error
+		body                      string
+		linkHeader                string
+		expectedCustomCollections []CustomCollection
+		expectedPagination        *Pagination
+		expectedErr               error
 	}{
 		// Expect empty pagination when there is no link header
 		{

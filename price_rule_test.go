@@ -93,7 +93,7 @@ func TestPriceRuleListWithPagination(t *testing.T) {
 	cases := []struct {
 		body               string
 		linkHeader         string
-		expectedPriceRules   []PriceRule
+		expectedPriceRules []PriceRule
 		expectedPagination *Pagination
 		expectedErr        error
 	}{
