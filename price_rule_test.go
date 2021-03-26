@@ -1,7 +1,11 @@
 package goshopify
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
+	"reflect"
+	"runtime"
 	"testing"
 
 	"github.com/jarcoal/httpmock"
@@ -52,6 +56,145 @@ func TestPriceRuleList(t *testing.T) {
 	expected := []PriceRule{{ID: 1}}
 	if expected[0].ID != rules[0].ID {
 		t.Errorf("PriceRule.List returned %+v, expected %+v", rules, expected)
+	}
+}
+
+func TestPriceRuleListError(t *testing.T) {
+	setup()
+	defer teardown()
+
+	httpmock.RegisterResponder("GET", fmt.Sprintf("https://fooshop.myshopify.com/%s/price_rules.json", client.pathPrefix),
+		httpmock.NewStringResponder(500, ""))
+
+	expectedErrMessage := "Unknown Error"
+
+	priceRules, err := client.PriceRule.List()
+	if priceRules != nil {
+		t.Errorf("PriceRule.List returned price rules, expected nil: %v", err)
+	}
+
+	if err == nil || err.Error() != expectedErrMessage {
+		t.Errorf("PriceRule.List err returned %+v, expected %+v", err, expectedErrMessage)
+	}
+}
+
+func TestPriceRuleListWithPagination(t *testing.T) {
+	setup()
+	defer teardown()
+
+	listURL := fmt.Sprintf("https://fooshop.myshopify.com/%s/price_rules.json", client.pathPrefix)
+
+	// The strconv.Atoi error changed in go 1.8, 1.7 is still being tested/supported.
+	limitConversionErrorMessage := `strconv.Atoi: parsing "invalid": invalid syntax`
+	if runtime.Version()[2:5] == "1.7" {
+		limitConversionErrorMessage = `strconv.ParseInt: parsing "invalid": invalid syntax`
+	}
+
+	cases := []struct {
+		body               string
+		linkHeader         string
+		expectedPriceRules   []PriceRule
+		expectedPagination *Pagination
+		expectedErr        error
+	}{
+		// Expect empty pagination when there is no link header
+		{
+			`{"priceRules": [{"id":1},{"id":2}]}`,
+			"",
+			[]PriceRule{{ID: 1}, {ID: 2}},
+			new(Pagination),
+			nil,
+		},
+		// Invalid link header responses
+		{
+			"{}",
+			"invalid link",
+			[]PriceRule(nil),
+			nil,
+			ResponseDecodingError{Message: "could not extract pagination link header"},
+		},
+		{
+			"{}",
+			`<:invalid.url>; rel="next"`,
+			[]PriceRule(nil),
+			nil,
+			ResponseDecodingError{Message: "pagination does not contain a valid URL"},
+		},
+		{
+			"{}",
+			`<http://valid.url?%invalid_query>; rel="next"`,
+			[]PriceRule(nil),
+			nil,
+			errors.New(`invalid URL escape "%in"`),
+		},
+		{
+			"{}",
+			`<http://valid.url>; rel="next"`,
+			[]PriceRule(nil),
+			nil,
+			ResponseDecodingError{Message: "page_info is missing"},
+		},
+		{
+			"{}",
+			`<http://valid.url?page_info=foo&limit=invalid>; rel="next"`,
+			[]PriceRule(nil),
+			nil,
+			errors.New(limitConversionErrorMessage),
+		},
+		// Valid link header responses
+		{
+			`{"priceRules": [{"id":1}]}`,
+			`<http://valid.url?page_info=foo&limit=2>; rel="next"`,
+			[]PriceRule{{ID: 1}},
+			&Pagination{
+				NextPageOptions: &ListOptions{PageInfo: "foo", Limit: 2},
+			},
+			nil,
+		},
+		{
+			`{"priceRules": [{"id":2}]}`,
+			`<http://valid.url?page_info=foo>; rel="next", <http://valid.url?page_info=bar>; rel="previous"`,
+			[]PriceRule{{ID: 2}},
+			&Pagination{
+				NextPageOptions:     &ListOptions{PageInfo: "foo"},
+				PreviousPageOptions: &ListOptions{PageInfo: "bar"},
+			},
+			nil,
+		},
+	}
+	for i, c := range cases {
+		response := &http.Response{
+			StatusCode: 200,
+			Body:       httpmock.NewRespBodyFromString(c.body),
+			Header: http.Header{
+				"Link": {c.linkHeader},
+			},
+		}
+
+		httpmock.RegisterResponder("GET", listURL, httpmock.ResponderFromResponse(response))
+
+		priceRules, pagination, err := client.PriceRule.ListWithPagination(nil)
+		if !reflect.DeepEqual(priceRules, c.expectedPriceRules) {
+			t.Errorf("test %d PriceRule.ListWithPagination price rules returned %+v, expected %+v", i, priceRules, c.expectedPriceRules)
+		}
+
+		if !reflect.DeepEqual(pagination, c.expectedPagination) {
+			t.Errorf(
+				"test %d PriceRule.ListWithPagination pagination returned %+v, expected %+v",
+				i,
+				pagination,
+				c.expectedPagination,
+			)
+		}
+
+		if (c.expectedErr != nil || err != nil) && err.Error() != c.expectedErr.Error() {
+			t.Errorf(
+				"test %d PriceRule.ListWithPagination err returned %+v, expected %+v",
+				i,
+				err,
+				c.expectedErr,
+			)
+		}
 	}
 }
 

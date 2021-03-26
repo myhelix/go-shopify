@@ -2,6 +2,7 @@ package goshopify
 
 import (
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/shopspring/decimal"
@@ -17,6 +18,7 @@ type PriceRuleService interface {
 	Create(PriceRule) (*PriceRule, error)
 	Update(PriceRule) (*PriceRule, error)
 	List() ([]PriceRule, error)
+	ListWithPagination(interface{}) ([]PriceRule, *Pagination, error)
 	Delete(int64) error
 }
 
@@ -161,10 +163,34 @@ func (s *PriceRuleServiceOp) Get(priceRuleID int64) (*PriceRule, error) {
 
 // List retrieves a list of price rules
 func (s *PriceRuleServiceOp) List() ([]PriceRule, error) {
+	options := new(Pagination)
+	priceRules, _, err := s.ListWithPagination(options)
+	if err != nil {
+		return nil, err
+	}
+	return priceRules, nil
+}
+
+// ListWithPagination retrieves a list of price rules with pagination
+func (s *PriceRuleServiceOp) ListWithPagination(options interface{}) ([]PriceRule, *Pagination, error) {
 	path := fmt.Sprintf("%s.json", priceRulesBasePath)
 	resource := new(PriceRulesResource)
-	err := s.client.Get(path, resource, nil)
-	return resource.PriceRules, err
+	headers := http.Header{}
+
+	headers, err := s.client.createAndDoGetHeaders("GET", path, nil, options, resource)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Extract pagination info from header
+	linkHeader := headers.Get("Link")
+
+	pagination, err := extractPagination(linkHeader)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return resource.PriceRules, pagination, nil
 }
 
 // Create creates a price rule
