@@ -2,6 +2,7 @@ package goshopify
 
 import (
 	"fmt"
+	"net/http"
 )
 
 const redirectsBasePath = "redirects"
@@ -11,6 +12,7 @@ const redirectsBasePath = "redirects"
 // See https://help.shopify.com/api/reference/online_store/redirect
 type RedirectService interface {
 	List(interface{}) ([]Redirect, error)
+	ListWithPagination(interface{}) ([]Redirect, *Pagination, error)
 	Count(interface{}) (int, error)
 	Get(int64, interface{}) (*Redirect, error)
 	Create(Redirect) (*Redirect, error)
@@ -43,10 +45,33 @@ type RedirectsResource struct {
 
 // List redirects
 func (s *RedirectServiceOp) List(options interface{}) ([]Redirect, error) {
+	redirects, _, err := s.ListWithPagination(options)
+	if err != nil {
+		return nil, err
+	}
+	return redirects, nil
+}
+
+// List redirects with pagination
+func (s *RedirectServiceOp) ListWithPagination (options interface{}) ([]Redirect, *Pagination, error) {
 	path := fmt.Sprintf("%s.json", redirectsBasePath)
 	resource := new(RedirectsResource)
-	err := s.client.Get(path, resource, options)
-	return resource.Redirects, err
+	headers := http.Header{}
+
+	headers, err := s.client.createAndDoGetHeaders("GET", path, nil, options, resource)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Extract pagination info from header
+	linkHeader := headers.Get("Link")
+
+	pagination, err := extractPagination(linkHeader)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return resource.Redirects, pagination, nil
 }
 
 // Count redirects
