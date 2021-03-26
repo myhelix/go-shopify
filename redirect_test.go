@@ -72,7 +72,7 @@ func TestRedirectListWithPagination(t *testing.T) {
 	cases := []struct {
 		body               string
 		linkHeader         string
-		expectedRedirects   []Redirect
+		expectedRedirects  []Redirect
 		expectedPagination *Pagination
 		expectedErr        error
 	}{

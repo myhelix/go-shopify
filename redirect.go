@@ -53,7 +53,7 @@ func (s *RedirectServiceOp) List(options interface{}) ([]Redirect, error) {
 }
 
 // List redirects with pagination
-func (s *RedirectServiceOp) ListWithPagination (options interface{}) ([]Redirect, *Pagination, error) {
+func (s *RedirectServiceOp) ListWithPagination(options interface{}) ([]Redirect, *Pagination, error) {
 	path := fmt.Sprintf("%s.json", redirectsBasePath)
 	resource := new(RedirectsResource)
 	headers := http.Header{}
