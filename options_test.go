@@ -17,7 +17,7 @@ func TestWithVersion(t *testing.T) {
 
 func TestWithVersionNoVersion(t *testing.T) {
 	c := NewClient(app, "fooshop", "abcd", WithVersion(""))
-	expected := "admin"
+	expected := "admin/api/2021-01"
 	if c.pathPrefix != expected {
 		t.Errorf("WithVersion client.pathPrefix = %s, expected %s", c.pathPrefix, expected)
 	}
@@ -25,7 +25,7 @@ func TestWithVersionNoVersion(t *testing.T) {
 
 func TestWithoutVersionInInitiation(t *testing.T) {
 	c := NewClient(app, "fooshop", "abcd")
-	expected := "admin"
+	expected := "admin/api/2021-01"
 	if c.pathPrefix != expected {
 		t.Errorf("WithVersion client.pathPrefix = %s, expected %s", c.pathPrefix, expected)
 	}
@@ -33,7 +33,7 @@ func TestWithoutVersionInInitiation(t *testing.T) {
 
 func TestWithVersionInvalidVersion(t *testing.T) {
 	c := NewClient(app, "fooshop", "abcd", WithVersion("9999-99b"))
-	expected := "admin"
+	expected := "admin/api/2021-01"
 	if c.pathPrefix != expected {
 		t.Errorf("WithVersion client.pathPrefix = %s, expected %s", c.pathPrefix, expected)
 	}

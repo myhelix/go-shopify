@@ -66,9 +66,23 @@ type MetafieldsResource struct {
 
 // List metafields
 func (s *MetafieldServiceOp) List(options interface{}) ([]Metafield, error) {
-	metafields, _, err := s.ListWithPagination(options)
-	if err != nil {
-		return nil, err
+	var metafields []Metafield
+	var opt ListOptions
+	if options != nil {
+		opt = options.(ListOptions)
+	}
+	for {
+		response, pagination, err := s.ListWithPagination(opt)
+		if err != nil {
+			return nil, err
+		}
+		metafields = append(metafields, response...)
+		if pagination == nil || pagination.NextPageOptions == nil {
+			break
+		}
+
+		opt.PageInfo = pagination.NextPageOptions.PageInfo
+
 	}
 	return metafields, nil
 }
